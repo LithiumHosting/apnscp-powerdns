@@ -1,4 +1,4 @@
-##Issues List: ##
+## Issues List: ##
 1) Deleting a Site deletes the zone and then tries to delete records but they were already deleted with the zone
 2) Creating MX records just doesn't work
 3) Deleting records seems to fail at $id = $this->getRecordId($record);
