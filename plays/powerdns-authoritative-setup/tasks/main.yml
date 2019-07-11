@@ -1,0 +1,36 @@
+# Addin play
+# vim:et ts=2 sw=2 sts=2 syntax=yaml filetype=yaml
+# Configure PowerDNS
+---
+- assert:
+    that: powerdns_driver in ['mysql','pgsql']
+    fail_msg: "Unknown driver {{ powerdns_driver }}"
+
+- set_fact:
+    __powerdns_db_password: "{{ powerdns_db_password }}"
+
+- name: Create RPM repo configuration
+  template:
+    src: templates/powerdns.repo.j2
+    dest: "{{ powerdns_repo_config }}"
+
+- name: Install PowerDNS RPMs
+  yum:
+    name: "{{ powerdns_packages }}"
+    state: "{{ powerdns_enabled | ternary('present', 'absent') }}"
+
+- name: Setup PowerDNS
+  include_tasks: setup-powerdns.yml
+  when: powerdns_enabled | bool
+
+- name: "{{ powerdns_enabled | ternary('Enable', 'Disable') }} firewall ports"
+  include_role: name=network/setup-firewall tasks_from=add-firewall.yml
+  vars:
+    immediate: yes
+    service: "{{ item.service | default(None) }}"
+    port: "{{ item.port | default(None) }}"
+    state: "{{ powerdns_enabled | ternary('enabled', 'disabled') }}"
+    permanent: yes
+  with_items:
+    - service: dns
+    - port: "{{ powerdns_api_port | int }}/tcp"

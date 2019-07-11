@@ -1,0 +1,34 @@
+---
+- name: Verify {{ powerdns_db_name }} database exists
+  mysql_db:
+    name: "{{ powerdns_db_name }}"
+    state: present
+  register: exists
+
+- name: Create {{ powerdns_db_name }} database
+  mysql_db:
+    name: "{{ powerdns_db_name }}"
+    state: import
+    config_file: /root/.my.cnf
+    target: "{{ role_path }}/files/mysql-{{powerdns_version }}.sql"
+  when: exists.changed
+
+# MySQL-python is dumb and can't detect authentication_string usage
+- name: Verify {{ powerdns_db_user }} user exists
+  command: mysql -u {{ powerdns_db_user | quote }} -p{{ __powerdns_db_password | quote}}
+  register: need_update
+  failed_when: false
+  changed_when: need_update.rc != 0
+
+- name: Create {{ powerdns_db_user }} user
+  mysql_user:
+    name: "{{ powerdns_db_user }}"
+    password: "{{__powerdns_db_password}}"
+    priv: "{{powerdns_db_name}}.*:ALL"
+    host: localhost
+    state: present
+    login_user: root
+    update_password: "{{ (need_update.rc != 0) | ternary('always', 'on_create') }}"
+    check_implicit_admin: yes
+  register: user_exists
+  notify: Restart PowerDNS
