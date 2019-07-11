@@ -1,0 +1,3 @@
+# Task to kickoff installation
+---
+- include_role: name=addins/{{addin}}/plays/powerdns-authoritative-setup

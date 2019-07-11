@@ -1,4 +1,9 @@
 ---
+# PowerDNS API listens for local requests only
+# This can be put behind an Apache proxy or other means
+# See documentation for examples
+powerdns_localonly: true
+# Toggle installation of PowerDNS
 powerdns_enabled: true
 powerdns_version: 4.2
 powerdns_repo_uri: "https://repo.powerdns.com/repo-files/centos-rec-{{ powerdns_version | regex_replace('\\.','') }}.repo"
@@ -11,6 +16,10 @@ powerdns_local_dir: "/etc/pdns/local.d"
 powerdns_config_file: /etc/pdns/pdns.conf
 powerdns_driver: mysql
 powerdns_api_port: 8081
+
+# Code installation
+addin_provider_name: Powerdns
+addin_integration_type: "{{ (apnscp_debug | bool) | ternary('link', 'copy') }}"
 
 powerdns_db_password: >-
   {{ lookup('pipe', 'grep -e "^\s*g' + powerdns_driver + '-password\s*=" ' + (powerdns_config_file | quote) + ' | cut -d= -f2') | default(lookup('password', '/dev/null chars=ascii_letters length=24'), true) | trim }}
@@ -27,8 +36,10 @@ powerdns_config:
   "api-key": "{{ powerdns_api_key }}"
   "include-dir": "{{ powerdns_local_dir }}"
   webserver: "{{ powerdns_webserver_enable | default((powerdns_version is version('4.1', '>=')) | ternary('no', 'yes')) }}"
-  "webserver-address": "{{ powerdns_api_listen | default('0.0.0.0') }}"
-  "webserver-allow-from": "{{ powerdns_api_whitelist | default('0.0.0.0') }}"
+  "webserver-address": >-
+    {{ powerdns_api_listen | default(powerdns_localonly | ternary('127.0.0.1', '0.0.0.0')) }}
+  "webserver-allow-from": >-
+    {{ powerdns_api_whitelist | default(powerdns_localonly | ternary('127.0.0.1,::1', '0.0.0.0,::/0')) }}
   "webserver-port": "{{ powerdns_api_port }}"
   launch: "g{{ powerdns_driver }}"
   "g{{powerdns_driver}}-password": "{{ powerdns_db_password }}"

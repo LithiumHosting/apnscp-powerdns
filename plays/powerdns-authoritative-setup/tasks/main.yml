@@ -33,4 +33,12 @@
     permanent: yes
   with_items:
     - service: dns
-    - port: "{{ powerdns_api_port | int }}/tcp"
+
+- name: Install provider module
+  include_role: name=common/addin tasks_from="{{ powerdns_enabled | ternary('install', 'remove') }}-library.yml"
+  vars:
+    name: "{{ addin_provider_name }}"
+    type: "dns"
+    method: "{{ addin_integration_type }}"
+    hook: Restart apnscp
+    module_path: "src/"
