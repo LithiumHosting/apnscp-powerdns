@@ -42,7 +42,7 @@ powerdns_config:
     {{ powerdns_api_whitelist | default(powerdns_localonly | ternary('127.0.0.1,::1', '0.0.0.0,::/0')) }}
   "webserver-port": "{{ powerdns_api_port }}"
   launch: "g{{ powerdns_driver }}"
-  "g{{powerdns_driver}}-password": "{{ powerdns_db_password }}"
+  "g{{powerdns_driver}}-password": "{{ __powerdns_db_password }}"
   "g{{powerdns_driver}}-user": "{{ powerdns_db_user }}"
   "g{{powerdns_driver}}-dbname": "{{ powerdns_db_name }}"
   "g{{powerdns_driver}}-host": "{{ powerdns_db_host }}"
