@@ -6,15 +6,14 @@
 
 
 ### Issue 1 ###
-ERROR   : Failed to transfer DNS records from PowerDNS - try again later. Response code: 404
-I know that's generated in the zoneAxfr method, but not sure why it happens during delete.
-
+I know the "ERROR" is generated in the zoneAxfr method, but not sure why it happens during delete.
+```ERROR   : Failed to transfer DNS records from PowerDNS - try again later. Response code: 404
 DEBUG   : 0.68447: Dns_Module -> _delete
 DEBUG   : 0.04320: Mysql_Module -> _delete
 DEBUG   : 0.00006: Ipinfo_Module -> _delete
 DEBUG   : Service config `billing' disabled for site - disabling calling hook `_delete' on `Billing_Module'
 DEBUG   : Service config `pgsql' disabled for site - disabling calling hook `_delete' on `Pgsql_Module'
 DEBUG   : 0.00054: Site_Module -> _delete
-ERROR   : Failed to transfer DNS records from PowerDNS - try again later. Response code: 404
+ERROR   : Failed to transfer DNS records from PowerDNS - try again later. Response code: 404```
 
 Seems to be trying to delete records after deleting the zone which deletes the records...
