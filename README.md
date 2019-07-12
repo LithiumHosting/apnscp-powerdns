@@ -56,8 +56,8 @@ In this situation, the endpoint is https://myserver.apnscp.com/dns. Changes are 
 </Location>
 ```
 
-**Downsides**: minor SSL overhead. Dependent upon Apache.
-**Upsides**: easy to setup. Protected by threat deterrence. PowerDNS accessible remotely via an easily controlled URI.
+**Downsides**: minor SSL overhead. Dependent upon Apache.  
+**Upsides**: easy to setup. Protected by threat deterrence. PowerDNS accessible remotely via an easily controlled URI.  
 
 In the above example, API requests can be made via https://myserver.apnscp.com/dns, e.g. 
 
@@ -81,9 +81,8 @@ cd /usr/local/apnscp/resources/playbooks
 ansible-playbook addin.yml --extra-vars=addin=apnscp-powerdns
 ```
 
-**Downsides**: requires whitelisting IP addresses for access to API server. Must run on port different than Apache.
-
-**Upsides**: operates independently from Apache.
+**Downsides**: requires whitelisting IP addresses for access to API server. Must run on port different than Apache.  
+**Upsides**: operates independently from Apache.  
 
 The server may be accessed once the source IP has been whitelisted,
 
