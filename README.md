@@ -1,20 +1,116 @@
 # PowerDNS DNS Provider
 
-This is a drop-in provider for [apnscp](https://apnscp.com) to enable DNS support globally using PowerDNS. This provider is built into apnscp.
+This is a drop-in provider for [apnscp](https://apnscp.com) to enable DNS support using PowerDNS. This module may use PostgreSQL or MySQL as a backend driver.
 
-## Configuring
+## Nameserver installation
 
-Update your `/usr/local/apnscp/config/auth.yaml` file and add the following to the bottom:
+Clone the repository into the Bootstrapper addin path. Note this requires either apnscp v3.1 or apnscp v3.0.47 minimum to work.
+
+```bash
+upcp
+cd /usr/local/apnscp/resources/playbooks
+git clone -b develop https://github.com/LithiumHosting/apnscp-powerdns.git addins/apnscp-powerdns
+ansible-playbook addin.yml --extra-vars=addin=apnscp-powerdns --extra-vars=powerdns_driver=mysql
+```
+
+*PostgreSQL can be used by specifying powerdns_driver=pgsql*
+
+PowerDNS is now setup to accept requests on port 8081. Requests require an authorization key that can be found in `/etc/pdns/pdns.conf`
+
+```
+# Install jq if not already installed
+yum install -y jq
+grep api= /etc/pdns/pdns.conf | cut -d= -f2
+# This is your API key
+curl -v -H 'X-API-Key: APIKEYABOVE' http://127.0.0.1:8081/api/v1/servers/localhost | jq .
+```
+
+apnscp provides a DNS-only license class that allows apnscp to run on a server without the capability to host sites. These licenses are free and may be requested via [my.apnscp.com](https://my.apnscp.com). Contact license@apnscp.com if these licenses are not available at time of writing for manual issuance.
+
+### Idempotently changing configuration
+
+PowerDNS may be configured via files in `/etc/pdns/local.d`. In addition to this location, Bootstrapper supports injecting settings via `powerdns_custom_config`. For example,
+
+```bash
+cpcmd config:set apnscp.bootstrapper 'powerdns_custom_config' '["allow-axfr-ips":1.2.3.4,"also-notify":1.2.3.4]'
+cd /usr/local/apnscp/resources/playbooks
+ansible-playbook addin.yml --extra-vars=addin=apnscp-powerdns
+```
+
+allow-axfr-ips and also-notify directives will be set whenever the addin plays are run.
+
+### Restricting submission access
+
+In the above example, only local requests may submit DNS modifications to the server. None of the below examples affect querying; DNS queries occur over 53/UDP typically (or 53/TCP if packet size exceeds UDP limits). Depending upon infrastructure, there are a few options to securely accept record submission, *all of which require an API key for submission*.
+
+#### SSL + Apache
+
+Apache's `ProxyPass` directive send requests to the backend. Brute-force attempts are protected by [mod_evasive](https://github.com/apisnetworks/mod_evasive ) bundled with apnscp. Requests over this medium are protected by SSL, without HTTP/2 to ameliorate handshake overhead. In all but the very high volume API request environments, this will be acceptable.
+
+In this situation, the endpoint is https://myserver.apnscp.com/dns. Changes are made to `/etc/httpd/conf/httpd-custom.conf` within the `<VirtualHost ... :443>` bracket (with `SSLEngine On`!). After adding the below changes, `systemctl restart httpd`.
+
+```
+<Location /dns>
+	ProxyPass http://127.0.0.1:8081
+	ProxyPassReverse http://127.0.0.1:8081
+</Location>
+```
+
+**Downsides**: minor SSL overhead. Dependent upon Apache.
+**Upsides**: easy to setup. Protected by threat deterrence. PowerDNS accessible remotely via an easily controlled URI.
+
+In the above example, API requests can be made via https://myserver.apnscp.com/dns, e.g. 
+
+```bash
+curl -q -H 'X-API-Key: SOMEKEY' https://myserver.apnscp.com/dns/api/v1/servers/localhost 
+```
+
+#### Standalone server
+
+PowerDNS can also run by itself on a different port. In this situation, the network is configured to block all external requests to port 8081 except those whitelisted. For example, if the entire 32.12.1.1-32.12.1.255 network can be trusted and under your control, then whitelist the IP range:
+
+```bash
+cpcmd rampart:whitelist 32.12.1.1/24
+```
+
+Additionally, PowerDNS' whitelist must be updated as well. This can be quickly accomplished using the *apnscp.bootstrapper* Scope:
+
+```
+cpcmd config:set apnscp.bootstrapper powerdns_localonly false
+cd /usr/local/apnscp/resources/playbooks
+ansible-playbook addin.yml --extra-vars=addin=apnscp-powerdns
+```
+
+**Downsides**: requires whitelisting IP addresses for access to API server. Must run on port different than Apache.
+
+**Upsides**: operates independently from Apache.
+
+The server may be accessed once the source IP has been whitelisted,
+
+```bash
+curl -q -H 'X-API-Key: SOMEKEY' http://myserver.apnscp.com/api/v1/servers/localhost 
+```
+
+
+## apnscp DNS provider setup
+
+Every server that runs apnscp may delegate DNS authority to PowerDNS. This is ideal in distributed infrastructures in which coordination allows for seamless [server-to-server migrations](<https://hq.apnscp.com/account-migration-guide/> ).
+
+Taking the **API key** from above, configure `/usr/local/apnscp/config/auth.yaml`. Configuration within this file is secret and is not exposed via apnscp's API.
+
 ```yaml
 pdns:
-  uri: http://dns1.yourdomain.com:8081/api/v1/ # This url may be different if using nginx as a reverse proxy with SSL
+  # This url may be different if using running PowerDNS in standalone
+  uri: https://myserver.apnscp.com/dns/api/v1/ 
   key: your_api_key_here
   ns: 
     - ns1.yourdomain.com
     - ns2.yourdomain.com
     ## Optional additional nameservers
 ```
-The "host" value is the hostname of your master PowerDNS server running the HTTP API webserver (with a trailing slash).  The "key" value is the API key you defined in the pdns.conf on the Master server. The "nameservers" value is a comma delimited list of nameservers.  There is not currently a limit for the number of nameservers you may use, 2-5 is typical.
+* `uri` value is the hostname of your master PowerDNS server running the HTTP API webserver (with a trailing slash)
+* `key` value is the **API Key** in `pdns.conf` on the master nameserver. 
+* `nameservers` value is a comma delimited list of nameservers.  There is not currently a limit for the number of nameservers you may use, 2-5 is typical and should be geographically distributed per RFC 2182.
 
 ### Setting as default
 
@@ -24,7 +120,7 @@ PowerDNS may be configured as the default provider for all sites using the `dns.
 cpcmd config_set dns.default-provider powerdns
 ```
 
-> Note that it is not safe to set this value as a server-wide default in untrusted multiuser environments. A user with panel access can retrieve your key `common_get_service_value dns key` or even using Javascript in the panel, `apnscp.cmd('common_get_service_value',['dns','key'], {async: false})`.
+> Do not set dns.default-provider-key. API key is configured via `config/auth.yaml`.
 
 ## Components
 
