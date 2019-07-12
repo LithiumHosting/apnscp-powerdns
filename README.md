@@ -65,6 +65,22 @@ In the above example, API requests can be made via https://myserver.apnscp.com/d
 curl -q -H 'X-API-Key: SOMEKEY' https://myserver.apnscp.com/dns/api/v1/servers/localhost 
 ```
 
+##### Disabling brute-force throttling
+
+As hinted above, placing PowerDNS behind Apache confers brute-force protection by mod_evasive. By default, 10 of the same requests in 2 seconds can trigger a brute-force block. Two solutions exist, either  raise the same-page request threshold or disable mod_evasive.
+
+Working off the example above *<Location /dns> ... </Location>*
+```
+<Location /dns>
+	# Raise threshold to 30 same-page requests in 2 seconds
+	DOSPageCount 30
+	DOSPageInterval 2
+
+	# Or disable entirely
+	DOSEnabled off
+</Location>
+```
+
 #### Standalone server
 
 PowerDNS can also run by itself on a different port. In this situation, the network is configured to block all external requests to port 8081 except those whitelisted. For example, if the entire 32.12.1.1-32.12.1.255 network can be trusted and under your control, then whitelist the IP range:
