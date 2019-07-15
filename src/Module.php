@@ -138,7 +138,7 @@ class Module extends \Dns_Module implements ProviderInterface {
             case 'MX':
                 $priority = (int) $r->getMeta('priority');
                 $content  = sprintf(
-                    '%d%s',
+                    '%d %s',
                     $r->getMeta('priority'),
                     $this->canonical($r->getMeta('data'))
                 );
@@ -238,7 +238,7 @@ class Module extends \Dns_Module implements ProviderInterface {
     public function remove_record(string $zone, string $subdomain, string $rr, string $param = null): bool
     {
         $zone = trim($zone, '.');
-        if (! $this->canonicalizeRecord($zone, $subdomain, $rr, $param))
+        if (! $canonicalZone = $this->canonicalizeRecord($zone, $subdomain, $rr, $param))
         {
             return false;
         }
@@ -247,23 +247,26 @@ class Module extends \Dns_Module implements ProviderInterface {
             'name'      => $subdomain,
             'rr'        => $rr,
             'parameter' => $param,
-            'ttl'       => self::DNS_TTL,
         ]);
+
+        // Not sure how this is used
+//        $id = $this->getRecordId($record);
 
         if ($record['name'] === '@')
         {
-            $record['name'] = '';
+            $record['name'] = $this->canonical($zone);
+        } else {
+            $record['name'] = $this->canonical(implode('.', [$subdomain, $zone]));
         }
 
         $api = $this->makeApi();
 
-        $id = $this->getRecordId($record);
-        if (! $id)
-        {
-            $fqdn = implode('.', [$subdomain, $zone]);
-
-            return error("Record '%s' (rr: '%s', param: '%s')  does not exist", $fqdn, $rr, $param);
-        }
+//        if (! $id)
+//        {
+//            $fqdn = implode('.', [$subdomain, $zone]);
+//
+//            return error("Record '%s' (rr: '%s', param: '%s')  does not exist", $fqdn, $rr, $param);
+//        }
 
         $rrsets[] = [
             'records'    => '',
