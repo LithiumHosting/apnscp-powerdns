@@ -9,7 +9,7 @@ Clone the repository into the Bootstrapper addin path. Note this requires either
 ```bash
 upcp
 cd /usr/local/apnscp/resources/playbooks
-git clone -b develop https://github.com/LithiumHosting/apnscp-powerdns.git addins/apnscp-powerdns
+git clone https://github.com/LithiumHosting/apnscp-powerdns.git addins/apnscp-powerdns
 ansible-playbook addin.yml --extra-vars=addin=apnscp-powerdns --extra-vars=powerdns_driver=mysql
 ```
 
