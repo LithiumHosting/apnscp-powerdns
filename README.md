@@ -125,7 +125,7 @@ pdns:
 ```
 * `uri` value is the hostname of your master PowerDNS server running the HTTP API webserver (with a trailing slash)
 * `key` value is the **API Key** in `pdns.conf` on the master nameserver. 
-* `nameservers` value is a comma delimited list of nameservers.  There is not currently a limit for the number of nameservers you may use, 2-5 is typical and should be geographically distributed per RFC 2182.
+* `ns` value is a list of nameservers as in the example above.  Put nameservers on their own lines prefixed with a hyphen and indented accordingly.  There is not currently a limit for the number of nameservers you may use, 2-5 is typical and should be geographically distributed per RFC 2182.
 
 ### Setting as default
 
