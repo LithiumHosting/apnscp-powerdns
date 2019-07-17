@@ -1,0 +1,33 @@
+---
+- name: Merge custom config
+  include_role: name=common tasks_from="implicitly-import-overrides.yml"
+  vars:
+    base: "{{ powerdns_config }}"
+    varname: __config
+    prefix: ''
+    name: powerdns
+
+- name: Update {{ powerdns_config_file }}
+  lineinfile:
+    path: "{{ powerdns_config_file }}"
+    regexp: '^\s*{{ item.key |quote }}\s*='
+    line: '{{ item.key }}={{ item.value }}'
+  with_dict: "{{ __config }}"
+  notify: Restart PowerDNS
+
+- name: Create PowerDNS configuration directory
+  file:
+    path: "{{ powerdns_local_dir }}"
+    state: "{{ powerdns_enabled | ternary('directory', 'absent') }}"
+    owner: "root"
+    group: "root"
+    mode: 0700
+
+- name: Setup database
+  include_tasks: "setup-{{ powerdns_driver }}.yml"
+
+- name: Enable PowerDNS
+  systemd:
+    name: pdns
+    state: started
+    enabled: yes
