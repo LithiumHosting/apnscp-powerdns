@@ -116,14 +116,14 @@ Taking the **API key** from above, configure `/usr/local/apnscp/config/auth.yaml
 ```yaml
 pdns:
   # This url may be different if using running PowerDNS in standalone
-  uri: https://myserver.apnscp.com/dns/api/v1/ 
+  uri: https://myserver.apnscp.com/dns/api/v1
   key: your_api_key_here
   ns: 
     - ns1.yourdomain.com
     - ns2.yourdomain.com
     ## Optional additional nameservers
 ```
-* `uri` value is the hostname of your master PowerDNS server running the HTTP API webserver (with a trailing slash)
+* `uri` value is the hostname of your master PowerDNS server running the HTTP API webserver (without a trailing slash)
 * `key` value is the **API Key** in `pdns.conf` on the master nameserver. 
 * `ns` value is a list of nameservers as in the example above.  Put nameservers on their own lines prefixed with a hyphen and indented accordingly.  There is not currently a limit for the number of nameservers you may use, 2-5 is typical and should be geographically distributed per RFC 2182.
 
