@@ -51,7 +51,7 @@ class Api {
         }
         if ($endpoint[0] === '/')
         {
-            warn("Stripping `/' from endpoint `%s'", $endpoint);
+            warn("Stripping `/' from endpoint `%s', remove the trailing / from auth.yaml", $endpoint);
             $endpoint = ltrim($endpoint, '/');
         }
         if (strpos($endpoint, 'server') === false)
