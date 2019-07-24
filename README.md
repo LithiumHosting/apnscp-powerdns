@@ -20,7 +20,7 @@ PowerDNS is now setup to accept requests on port 8081. Requests require an autho
 ```
 # Install jq if not already installed
 yum install -y jq
-grep api= /etc/pdns/pdns.conf | cut -d= -f2
+grep api-key= /etc/pdns/pdns.conf | cut -d= -f2
 # This is your API key
 curl -v -H 'X-API-Key: APIKEYABOVE' http://127.0.0.1:8081/api/v1/servers/localhost | jq .
 ```
