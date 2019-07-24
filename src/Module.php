@@ -42,7 +42,7 @@ class Module extends \Dns_Module implements ProviderInterface {
     {
         parent::__construct();
         $this->key     = AUTH_PDNS_KEY;
-        $this->ns      = AUTH_PDNS;
+        $this->ns      = defined('AUTH_PDNS_NS') ? AUTH_PDNS_NS : AUTH_PDNS; // Backwards compatible
         $this->records = [];
     }
 
@@ -244,212 +244,6 @@ class Module extends \Dns_Module implements ProviderInterface {
     }
 
     /**
-     * Creates Record with Zone Creation (not currently implemented)
-     *
-     * @param      $name
-     * @param null $ip
-     *
-     * @return array
-     */
-    protected function createDefaultRecords($name, $ip = null): array
-    {
-        $rrsets = [];
-        $cnames = $this->defaultCnames;
-
-        if (! is_null($ip))
-        {
-            $records[] = [
-                'content'  => $ip,
-                'disabled' => false,
-            ];
-
-            $rrsets[] = [
-                'records' => $records,
-                'name'    => $this->makeCanonical($name),
-                'ttl'     => 14400,
-                'type'    => 'A',
-            ];
-        }
-
-        foreach ($cnames as $cname)
-        {
-            $records = [0 => [
-                'content'  => $this->makeCanonical($name),
-                'disabled' => false,
-            ]];
-
-            $rrsets[] = [
-                'records' => $records,
-                'name'    => $this->makeFqdn($name, $cname, true),
-                'ttl'     => 14400,
-                'type'    => 'CNAME',
-            ];
-        }
-
-        return $rrsets;
-    }
-
-    /**
-     * Return a complete domain name with the subdomain and zone.
-     * Optionally returns the canonical domain with trailing period
-     *
-     * @param      $zone
-     * @param      $subdomain
-     *
-     * @param bool $makeCanonical
-     *
-     * @return string
-     */
-    private function makeFqdn($zone, $subdomain, $makeCanonical = false): string
-    {
-        if (strpos($subdomain, $zone) === false)
-        {
-            $subdomain = implode('.', [$subdomain, $zone]);
-        }
-
-        if ($makeCanonical)
-        {
-            return $this->makeCanonical($subdomain);
-        }
-
-        return $subdomain;
-    }
-
-    /**
-     * Get raw zone data
-     *
-     * @param string $domain
-     *
-     * @return null|string
-     */
-
-    protected function zoneAxfr($domain): ?string
-    {
-        try
-        {
-            $api     = $this->makeApi();
-            $axfrrec = $api->do('GET', 'servers/localhost/zones' . sprintf('/%s', $this->makeCanonical($domain)) . '/export');
-        }
-        catch (ClientException $e)
-        {
-            warning("Failed to transfer DNS records from PowerDNS - try again later. Response code: %d", $e->getResponse()->getStatusCode());
-
-            return null;
-        }
-
-        return $axfrrec['zone'];
-    }
-
-    /**
-     * Modify a DNS record
-     *
-     * @param string $zone
-     * @param Record $old
-     * @param Record $new
-     *
-     * @return bool
-     */
-    protected function atomicUpdate(string $zone, Record $old, Record $new): bool
-    {
-        if (! $this->canonicalizeRecord($zone, $old['name'], $old['rr'], $old['parameter'], $old['ttl']))
-        {
-            return false;
-        }
-
-        if (! $this->canonicalizeRecord($zone, $new['name'], $new['rr'], $new['parameter'], $new['ttl']))
-        {
-            return false;
-        }
-
-        try
-        {
-            $api = $this->makeApi();
-            // Get zone and rrsets, need to parse the existing rrsets to ensure proper addition of new records
-            $zoneData      = $api->do('GET', 'servers/localhost/zones' . sprintf('/%s', $this->makeCanonical($zone)));
-            $this->records = $zoneData['rrsets'];
-
-            $rrsets = $this->changeRecords($old, $new);
-
-            $api->do('PATCH', 'zones' . sprintf('/%s', $this->makeCanonical($zone)), ['rrsets' => $rrsets]);
-        }
-        catch (ClientException $e)
-        {
-            return error("Failed to update record '%s' on zone '%s' (old - rr: '%s', param: '%s'; new - rr: '%s', param: '%s'): %s",
-                $old['name'],
-                $zone,
-                $old['rr'],
-                $old['parameter'], $new['name'] ?? $old['name'], $new['parameter'] ?? $old['parameter'],
-                $this->renderMessage($e)
-            );
-        }
-
-        return true;
-    }
-
-    /**
-     * Parse existing records for zone, find and remove the old record from the list and add the new one.
-     * Refer to https://doc.powerdns.com/authoritative/http-api/zone.html#rrset under "changetype"
-     *
-     * @param \Opcenter\Dns\Record $record
-     *
-     * @return array
-     */
-    private function changeRecords(Record $old, Record $new): array
-    {
-        $return = [];
-
-        $oldName = $this->replaceMarker($old['zone'], $old['name']);
-        $newName = $this->replaceMarker($new['zone'], $new['name']);
-
-        $added = false; // Did we add the record to an existing rrset?
-
-        foreach ($this->records as $rrset)
-        {
-            if ($rrset['name'] === $oldName && $rrset['type'] === $old['rr'])
-            {
-                if (count($rrset['records']) > 1) // More than one record, loop through and delete just the record
-                {
-                    foreach ($rrset['records'] as $k => $rrec)
-                    {
-                        if ($rrec['content'] === $old['parameter'])
-                        {
-                            unset($rrset['records'][ $k ]);
-                            $rrset['records'] = array_values($rrset['records']);
-                        }
-                    }
-                }
-                else {
-                    // Only 1 record, just delete the rrset.
-                    $return[] = [
-                        'records'    => '',
-                        'name'       => $oldName,
-                        'changetype' => 'DELETE',
-                        'type'       => $old['rr'],
-                    ];
-                }
-
-            }
-
-            if ($rrset['name'] === $newName && $rrset['type'] === $new['rr'])
-            {
-                $rrset['records'][]  = ['content' => $this->parseRecord($new), 'disabled' => false];
-                $rrset['changetype'] = 'REPLACE';
-                $return[]            = $rrset;
-
-                $added = true;
-            }
-        }
-
-        // No records match the name and type, let's create a new record set
-        if (true !== $added)
-        {
-            $return[] = $this->formatRecord($new);
-        }
-
-        return $return;
-    }
-
-    /**
      * Add a DNS record
      *
      * @param string $zone
@@ -524,6 +318,54 @@ class Module extends \Dns_Module implements ProviderInterface {
         }
 
         return $return;
+    }
+
+    /**
+     * Replaces the @ with the fqdn
+     *
+     * @param $zone
+     * @param $name
+     *
+     * @return string
+     */
+    protected function replaceMarker($zone, $name): string
+    {
+        if ($name === '@')
+        {
+            $name = $this->makeCanonical($zone);
+        }
+        else
+        {
+            $name = $this->makeFqdn($zone, $name, true);
+        }
+
+        return $name;
+    }
+
+    /**
+     * Return a complete domain name with the subdomain and zone.
+     * Optionally returns the canonical domain with trailing period
+     *
+     * @param      $zone
+     * @param      $subdomain
+     *
+     * @param bool $makeCanonical
+     *
+     * @return string
+     */
+    private function makeFqdn($zone, $subdomain, $makeCanonical = false): string
+    {
+        if (strpos($subdomain, $zone) === false)
+        {
+            $subdomain = implode('.', [$subdomain, $zone]);
+        }
+
+        if ($makeCanonical)
+        {
+            return $this->makeCanonical($subdomain);
+        }
+
+        return $subdomain;
     }
 
     /**
@@ -724,6 +566,187 @@ class Module extends \Dns_Module implements ProviderInterface {
     }
 
     /**
+     * Creates Record with Zone Creation (not currently implemented)
+     *
+     * @param      $name
+     * @param null $ip
+     *
+     * @return array
+     */
+    protected function createDefaultRecords($name, $ip = null): array
+    {
+        $rrsets = [];
+        $cnames = $this->defaultCnames;
+
+        if (! is_null($ip))
+        {
+            $records[] = [
+                'content'  => $ip,
+                'disabled' => false,
+            ];
+
+            $rrsets[] = [
+                'records' => $records,
+                'name'    => $this->makeCanonical($name),
+                'ttl'     => 14400,
+                'type'    => 'A',
+            ];
+        }
+
+        foreach ($cnames as $cname)
+        {
+            $records = [0 => [
+                'content'  => $this->makeCanonical($name),
+                'disabled' => false,
+            ]];
+
+            $rrsets[] = [
+                'records' => $records,
+                'name'    => $this->makeFqdn($name, $cname, true),
+                'ttl'     => 14400,
+                'type'    => 'CNAME',
+            ];
+        }
+
+        return $rrsets;
+    }
+
+    /**
+     * Get raw zone data
+     *
+     * @param string $domain
+     *
+     * @return null|string
+     */
+
+    protected function zoneAxfr($domain): ?string
+    {
+        try
+        {
+            $api     = $this->makeApi();
+            $axfrrec = $api->do('GET', 'servers/localhost/zones' . sprintf('/%s', $this->makeCanonical($domain)) . '/export');
+        }
+        catch (ClientException $e)
+        {
+            warn("Failed to transfer DNS records from PowerDNS - try again later. Response code: %d", $e->getResponse()->getStatusCode());
+
+            return null;
+        }
+
+        return $axfrrec['zone'];
+    }
+
+    /**
+     * Modify a DNS record
+     *
+     * @param string $zone
+     * @param Record $old
+     * @param Record $new
+     *
+     * @return bool
+     */
+    protected function atomicUpdate(string $zone, Record $old, Record $new): bool
+    {
+        if (! $this->canonicalizeRecord($zone, $old['name'], $old['rr'], $old['parameter'], $old['ttl']))
+        {
+            return false;
+        }
+
+        if (! $this->canonicalizeRecord($zone, $new['name'], $new['rr'], $new['parameter'], $new['ttl']))
+        {
+            return false;
+        }
+
+        try
+        {
+            $api = $this->makeApi();
+            // Get zone and rrsets, need to parse the existing rrsets to ensure proper addition of new records
+            $zoneData      = $api->do('GET', 'servers/localhost/zones' . sprintf('/%s', $this->makeCanonical($zone)));
+            $this->records = $zoneData['rrsets'];
+
+            $rrsets = $this->changeRecords($old, $new);
+
+            $api->do('PATCH', 'zones' . sprintf('/%s', $this->makeCanonical($zone)), ['rrsets' => $rrsets]);
+        }
+        catch (ClientException $e)
+        {
+            return error("Failed to update record '%s' on zone '%s' (old - rr: '%s', param: '%s'; new - rr: '%s', param: '%s'): %s",
+                $old['name'],
+                $zone,
+                $old['rr'],
+                $old['parameter'], $new['name'] ?? $old['name'], $new['parameter'] ?? $old['parameter'],
+                $this->renderMessage($e)
+            );
+        }
+
+        return true;
+    }
+
+    /**
+     * Parse existing records for zone, find and remove the old record from the list and add the new one.
+     * Refer to https://doc.powerdns.com/authoritative/http-api/zone.html#rrset under "changetype"
+     *
+     * @param \Opcenter\Dns\Record $old
+     * @param \Opcenter\Dns\Record $new
+     *
+     * @return array
+     */
+    private function changeRecords(Record $old, Record $new): array
+    {
+        $return = [];
+
+        $oldName = $this->replaceMarker($old['zone'], $old['name']);
+        $newName = $this->replaceMarker($new['zone'], $new['name']);
+
+        $added = false; // Did we add the record to an existing rrset?
+
+        foreach ($this->records as $rrset)
+        {
+            if ($rrset['name'] === $oldName && $rrset['type'] === $old['rr'])
+            {
+                if (count($rrset['records']) > 1) // More than one record, loop through and delete just the record
+                {
+                    foreach ($rrset['records'] as $k => $rrec)
+                    {
+                        if ($rrec['content'] === $old['parameter'])
+                        {
+                            unset($rrset['records'][ $k ]);
+                            $rrset['records'] = array_values($rrset['records']);
+                        }
+                    }
+                }
+                else
+                {
+                    // Only 1 record, just delete the rrset.
+                    $return[] = [
+                        'records'    => '',
+                        'name'       => $oldName,
+                        'changetype' => 'DELETE',
+                        'type'       => $old['rr'],
+                    ];
+                }
+            }
+
+            if ($rrset['name'] === $newName && $rrset['type'] === $new['rr'])
+            {
+                $rrset['records'][]  = ['content' => $this->parseRecord($new), 'disabled' => false];
+                $rrset['changetype'] = 'REPLACE';
+                $return[]            = $rrset;
+
+                $added = true;
+            }
+        }
+
+        // No records match the name and type, let's create a new record set
+        if (true !== $added)
+        {
+            $return[] = $this->formatRecord($new);
+        }
+
+        return $return;
+    }
+
+    /**
      * CNAME cannot be present in root
      *
      * @return bool
@@ -731,27 +754,6 @@ class Module extends \Dns_Module implements ProviderInterface {
     protected function hasCnameApexRestriction(): bool
     {
         return true;
-    }
-
-    /**
-     * Replaces the @ with the fqdn
-     * @param $zone
-     * @param $name
-     *
-     * @return string
-     */
-    protected function replaceMarker($zone, $name) :string
-    {
-        if ($name === '@')
-        {
-            $name = $this->makeCanonical($zone);
-        }
-        else
-        {
-            $name = $this->makeFqdn($zone, $name, true);
-        }
-
-        return $name;
     }
 
     /**
