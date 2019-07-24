@@ -4,8 +4,8 @@ This is a drop-in provider for [apnscp](https://apnscp.com) to enable DNS suppor
 
 ## Nameserver installation
 
-Clone the repository into the Bootstrapper addin path. Note this requires either apnscp v3.1 or apnscp v3.0.47 minimum to work.
-
+### Local PowerDNS 
+Clone the repository into the Bootstrapper addin path. Note this requires either apnscp v3.1 or apnscp v3.0.47 minimum to work.  
 ```bash
 upcp
 cd /usr/local/apnscp/resources/playbooks
@@ -26,6 +26,16 @@ curl -v -H 'X-API-Key: APIKEYABOVE' http://127.0.0.1:8081/api/v1/servers/localho
 ```
 
 apnscp provides a DNS-only license class that allows apnscp to run on a server without the capability to host sites. These licenses are free and may be requested via [my.apnscp.com](https://my.apnscp.com). Contact license@apnscp.com if these licenses are not available at time of writing for manual issuance.
+
+### Remote PowerDNS (alternate install)
+Alternatively, apnscp can be configured to connect to a remote PowerDNS server.  This is useful if running a DNS cluster and want every apnscp server to connect to it.
+```bash
+upcp
+cd /usr/local/apnscp/resources/playbooks
+git submodule add -f https://github.com/LithiumHosting/apnscp-powerdns.git ./resources/playbooks/addins/apnscp-powerdns
+ln -s /usr/local/apnscp/resources/playbooks/addins/apnscp-powerdns/src /usr/local/apnscp/lib/Opcenter/Dns/Providers/Powerdns
+```
+Proced with the setup in section "apnscp DNS provider setup" below.  The API key will be sourced from your remote server.
 
 ### Idempotently changing configuration
 
