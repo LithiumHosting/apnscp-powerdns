@@ -10,18 +10,23 @@ Clone the repository into the Bootstrapper addin path. Note this requires either
 upcp
 cd /usr/local/apnscp/resources/playbooks
 git clone https://github.com/LithiumHosting/apnscp-powerdns.git addins/apnscp-powerdns
-ansible-playbook addin.yml --extra-vars=addin=apnscp-powerdns --extra-vars=powerdns_driver=mysql
+ansible-playbook addin.yml --extra-vars=addin=apnscp-powerdns
 ```
 
-*PostgreSQL can be used by specifying powerdns_driver=pgsql*
+*PostgreSQL can be used by specifying powerdns_driver=pgsql, cpcmd config:set will accomplish this:*
+
+```bash
+cpcmd config:set apnscp.bootstrapper powerdns_driver pgsql
+ansible-playbook addin.yml --extra-vars=addin=apnscp-powerdns
+```
 
 PowerDNS is now setup to accept requests on port 8081. Requests require an authorization key that can be found in `/etc/pdns/pdns.conf`
 
 ```
 # Install jq if not already installed
 yum install -y jq
-grep api-key= /etc/pdns/pdns.conf | cut -d= -f2
 # This is your API key
+grep '^api-key=' /etc/pdns/pdns.conf | cut -d= -f2
 curl -v -H 'X-API-Key: APIKEYABOVE' http://127.0.0.1:8081/api/v1/servers/localhost | jq .
 ```
 
@@ -36,6 +41,9 @@ git submodule add https://github.com/LithiumHosting/apnscp-powerdns.git resource
 ln -rs resources/playbooks/addins/apnscp-powerdns/src lib/Opcenter/Dns/Providers/Powerdns
 ```
 Proced with the setup in section "apnscp DNS provider setup" below.  The API key will be sourced from your remote server.
+
+#### git submodule vs git clone usage
+Astute observers will notice `git clone` used in the first example and `git submodule` in the above. Any submodule added to apnscp will automatically update with `upcp`. Any repository cloned via `git clone` **is not** updated with `upcp`. The choice is yours.
 
 ### Idempotently changing configuration
 
@@ -121,7 +129,7 @@ curl -q -H 'X-API-Key: SOMEKEY' http://myserver.apnscp.com/api/v1/servers/localh
 
 Every server that runs apnscp may delegate DNS authority to PowerDNS. This is ideal in distributed infrastructures in which coordination allows for seamless [server-to-server migrations](<https://hq.apnscp.com/account-migration-guide/> ).
 
-Taking the **API key** from above, configure `/usr/local/apnscp/config/auth.yaml`. Configuration within this file is secret and is not exposed via apnscp's API. Once set restart apnscp to compile configuration, `systemctl restart apnscp`.
+Taking the **API key** from above and using the **SSL + Apache** approach above, let's configure `/usr/local/apnscp/config/auth.yaml`. Configuration within this file is secret and is not exposed via apnscp's API. Once set restart apnscp to compile configuration, `systemctl restart apnscp`.
 
 ```yaml
 pdns:
