@@ -24,3 +24,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 - Fixed issue with NS definition using wrong constant
 - Fixed warning using wrong macro
+
+## [1.0.3] 2019-07-28
+### Fixed
+- Merged Pull Request to address various issues
