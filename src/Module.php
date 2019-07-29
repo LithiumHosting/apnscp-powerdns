@@ -10,7 +10,9 @@
 namespace Opcenter\Dns\Providers\Powerdns;
 
 
+use GuzzleHttp\Exception\BadResponseException;
 use GuzzleHttp\Exception\ClientException;
+use GuzzleHttp\Exception\ServerException;
 use Module\Provider\Contracts\ProviderInterface;
 use Opcenter\Dns\Record;
 
@@ -70,10 +72,14 @@ class Module extends \Dns_Module implements ProviderInterface {
                 'rrsets'      => array_merge($this->createSOA($domain, $this->ns[0], 'hostmaster@' . $domain), $this->createNS($domain, $this->ns)),
             ]);
         }
-        catch (ClientException $e)
-        {
-            return error("Failed to add zone '%s', error: %s", $domain, $this->renderMessage($e));
-        }
+        catch (ServerException $e)
+		{
+			return error('PowerDNS master reported internal error. Check PowerDNS log.');
+		}
+		catch (ClientException $e)
+		{
+			return error("Failed to add zone '%s', error: %s", $domain, $this->renderMessage($e));
+		}
 
         return $api->getResponse()->getStatusCode() === 201; // Returns 201 Created on success.
     }
@@ -179,13 +185,14 @@ class Module extends \Dns_Module implements ProviderInterface {
      *
      * @return string
      */
-    private function renderMessage(ClientException $e): string
+    private function renderMessage(BadResponseException $e): string
     {
 
-        $body = \Error_Reporter::silence(function () use ($e) {
+        $body = (array)\Error_Reporter::silence(function () use ($e) {
             return \json_decode($e->getResponse()->getBody()->getContents(), true);
         });
-        if (! $body || ! ($reason = array_get($body, 'errors.0.reason')))
+
+        if (! ($reason = array_get($body, 'error')) )
         {
             return $e->getMessage();
         }
@@ -628,11 +635,10 @@ class Module extends \Dns_Module implements ProviderInterface {
         }
         catch (ClientException $e)
         {
-            warn("Failed to transfer DNS records from PowerDNS - try again later. Response code: %d", $e->getResponse()->getStatusCode());
-
-            return null;
-        }
-
+			// ignore zone does not exist
+			warn("Failed to transfer DNS records from PowerDNS - try again later. Response code: %d", $e->getResponse()->getStatusCode());
+			return null;
+		}
         return $axfrrec['zone'];
     }
 
