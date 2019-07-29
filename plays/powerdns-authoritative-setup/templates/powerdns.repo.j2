@@ -1,6 +1,6 @@
 [powerdns-rec-{{ powerdns_version | regex_replace('\.', '')}}]
-name=PowerDNS repository for PowerDNS Recursor - version {{ powerdns_version }}.X
-baseurl=http://repo.powerdns.com/centos/$basearch/$releasever/rec-{{ powerdns_version | regex_replace('\.', '')}}
+name=PowerDNS repository for PowerDNS - version {{ powerdns_version }}.X
+baseurl=http://repo.powerdns.com/centos/$basearch/$releasever/auth-{{ powerdns_version | regex_replace('\.', '')}}
 gpgkey=https://repo.powerdns.com/FD380FBB-pub.asc
 gpgcheck=1
 enabled=1
@@ -8,10 +8,10 @@ priority=90
 includepkg=pdns*
 
 [powerdns-rec-{{powerdns_version | regex_replace('\.', '')}}-debuginfo]
-name=PowerDNS repository for PowerDNS Recursor - version {{ powerdns_version }}.X debug symbols
-baseurl=http://repo.powerdns.com/centos/$basearch/$releasever/rec-{{ powerdns_version | regex_replace('\.', '')}}/debug
+name=PowerDNS repository for PowerDNS - version {{ powerdns_version }}.X debug symbols
+baseurl=http://repo.powerdns.com/centos/$basearch/$releasever/auth-{{ powerdns_version | regex_replace('\.', '')}}/debug
 gpgkey=https://repo.powerdns.com/FD380FBB-pub.asc
 gpgcheck=1
 enabled=0
-priority=90
+priority=10
 includepkg=pdns*

@@ -121,7 +121,7 @@ curl -q -H 'X-API-Key: SOMEKEY' http://myserver.apnscp.com/api/v1/servers/localh
 
 Every server that runs apnscp may delegate DNS authority to PowerDNS. This is ideal in distributed infrastructures in which coordination allows for seamless [server-to-server migrations](<https://hq.apnscp.com/account-migration-guide/> ).
 
-Taking the **API key** from above, configure `/usr/local/apnscp/config/auth.yaml`. Configuration within this file is secret and is not exposed via apnscp's API.
+Taking the **API key** from above, configure `/usr/local/apnscp/config/auth.yaml`. Configuration within this file is secret and is not exposed via apnscp's API. Once set restart apnscp to compile configuration, `systemctl restart apnscp`.
 
 ```yaml
 pdns:
@@ -142,7 +142,7 @@ pdns:
 PowerDNS may be configured as the default provider for all sites using the `dns.default-provider` [Scope](https://gitlab.com/apisnetworks/apnscp/blob/master/docs/admin/Scopes.md). When adding a site in Nexus or [AddDomain](https://hq.apnscp.com/working-with-cli-helpers/#adddomain) the key will be replaced with "DEFAULT". This is substituted automatically on account creation.
 
 ```bash
-cpcmd config_set dns.default-provider powerdns
+cpcmd config:set dns.default-provider powerdns
 ```
 
 > Do not set dns.default-provider-key. API key is configured via `config/auth.yaml`.

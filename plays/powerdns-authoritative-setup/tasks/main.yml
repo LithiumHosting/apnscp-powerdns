@@ -18,7 +18,7 @@
   yum:
     name: "{{ powerdns_packages }}"
     state: "{{ powerdns_enabled | ternary('present', 'absent') }}"
-
+    lock_timeout: 300
 - name: Setup PowerDNS
   include_tasks: setup-powerdns.yml
   when: powerdns_enabled | bool

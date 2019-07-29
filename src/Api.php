@@ -36,7 +36,7 @@ class Api {
         $this->key      = AUTH_PDNS_KEY;
         $this->endpoint = AUTH_PDNS_URI;
         $this->client   = new \GuzzleHttp\Client([
-            'base_uri' => $this->endpoint,
+            'base_uri' => rtrim($this->endpoint, '/') . '/',
         ]);
     }
 
@@ -54,7 +54,7 @@ class Api {
             warn("Stripping `/' from endpoint `%s', remove the trailing / from auth.yaml", $endpoint);
             $endpoint = ltrim($endpoint, '/');
         }
-        if (strpos($endpoint, 'server') === false)
+        if (strpos($endpoint, 'servers') === false)
         {
             $endpoint = 'servers/localhost/' . $endpoint;
         }

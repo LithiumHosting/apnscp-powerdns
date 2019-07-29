@@ -24,14 +24,26 @@ class Validator implements ServiceProvider {
     {
         try
         {
-            (new Api())->do('GET', '/servers');
+            (new Api())->do('GET', 'servers');
         }
         catch (RequestException $e)
         {
-            $response = \json_decode($e->getResponse()->getBody()->getContents(), true);
-            $reason   = array_get($response, 'errors.0.reason', "Invalid key");
-
-            return error("PowerDNS key failed: %s", $reason);
+			if (null === ($response = $e->getResponse()))
+			{
+				return error('PowerDNS key check failed: %s', $e->getMessage());
+			}
+			switch ($response->getStatusCode())
+			{
+				case 404:
+					$reason = 'Endpoint configuration is invalid';
+					break;
+				case 401:
+					$reason = 'Invalid key';
+					break;
+				default:
+					$reason = $response->getReasonPhrase();
+			}
+			return error('PowerDNS key check failed: %s', $reason);
         }
 
         return true;
