@@ -31,9 +31,9 @@ apnscp provides a DNS-only license class that allows apnscp to run on a server w
 Alternatively, apnscp can be configured to connect to a remote PowerDNS server.  This is useful if running a DNS cluster and want every apnscp server to connect to it.
 ```bash
 upcp
-cd /usr/local/apnscp/resources/playbooks
-git submodule add -f https://github.com/LithiumHosting/apnscp-powerdns.git ./resources/playbooks/addins/apnscp-powerdns
-ln -s /usr/local/apnscp/resources/playbooks/addins/apnscp-powerdns/src /usr/local/apnscp/lib/Opcenter/Dns/Providers/Powerdns
+cd /usr/local/apnscp
+git submodule add https://github.com/LithiumHosting/apnscp-powerdns.git resources/playbooks/addins/apnscp-powerdns
+ln -rs resources/playbooks/addins/apnscp-powerdns/src lib/Opcenter/Dns/Providers/Powerdns
 ```
 Proced with the setup in section "apnscp DNS provider setup" below.  The API key will be sourced from your remote server.
 
