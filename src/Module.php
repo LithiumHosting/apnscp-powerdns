@@ -14,12 +14,13 @@ use GuzzleHttp\Exception\BadResponseException;
 use GuzzleHttp\Exception\ClientException;
 use GuzzleHttp\Exception\ServerException;
 use Module\Provider\Contracts\ProviderInterface;
-use Opcenter\Dns\Record;
+use Opcenter\Dns\Record as RecordBase;
 
 class Module extends \Dns_Module implements ProviderInterface {
     use \NamespaceUtilitiesTrait;
 
     const DNS_TTL = 14400;
+
     /**
      * apex markers are marked with @
      */
@@ -28,14 +29,26 @@ class Module extends \Dns_Module implements ProviderInterface {
         'A',
         'AAAA',
         'CAA',
+		'CERT',
         'CNAME',
+		//'DS',
+		//'LOC',
         'MX',
+		'NAPTR',
         'NS',
-        'SRV',
-        'TXT',
+		//'SMIMEA',
+		'SPF',
+		'SRV',
+		//'SSHFP',
+		'TXT',
+		'URI',
     ];
-    protected        $metaCache         = [];
+    protected $metaCache = [];
 
+	/**
+	 * @var Api[] pdns API per domain
+	 */
+    private $apis;
     private $ns;
     private $key;
     private $records;
@@ -43,9 +56,10 @@ class Module extends \Dns_Module implements ProviderInterface {
     public function __construct()
     {
         parent::__construct();
-        $this->key     = AUTH_PDNS_KEY;
+
         $this->ns      = defined('AUTH_PDNS_NS') ? AUTH_PDNS_NS : AUTH_PDNS; // Backwards compatible
         $this->records = [];
+		$this->apis = [];
     }
 
     /**
@@ -64,7 +78,7 @@ class Module extends \Dns_Module implements ProviderInterface {
          */
         try
         {
-            $api = $this->makeApi();
+            $api = $this->makeApi($domain);
             $api->do('POST', 'servers/localhost/zones', [
                 'kind'        => 'native', // Enables backend replication via MySQL Replication or MariaDB Galera replication
                 'name'        => $this->makeCanonical($domain),
@@ -84,15 +98,19 @@ class Module extends \Dns_Module implements ProviderInterface {
         return $api->getResponse()->getStatusCode() === 201; // Returns 201 Created on success.
     }
 
-    /**
-     * Create a PowerDNS API client
-     *
-     * @return Api
-     */
-    private function makeApi(): Api
-    {
-        return new Api();
-    }
+	/**
+	 * Create a PowerDNS API client
+	 *
+	 * @param string $zone per-zone tracking
+	 * @return Api
+	 */
+    private function makeApi(string $zone): Api
+	{
+		if (!isset($this->apis[$zone])) {
+			$this->apis[$zone] = new Api();
+		}
+		return $this->apis[$zone];
+	}
 
     /**
      * returns canonical domain (e.g. always returns root dot)
@@ -211,7 +229,7 @@ class Module extends \Dns_Module implements ProviderInterface {
     {
         try
         {
-            $api = $this->makeApi();
+            $api = $this->makeApi($domain);
             $api->do('DELETE', 'servers/localhost/zones' . sprintf('/%s', $this->makeCanonical($domain)));
         }
         catch (ClientException $e)
@@ -222,7 +240,20 @@ class Module extends \Dns_Module implements ProviderInterface {
         return $api->getResponse()->getStatusCode() === 204; // Returns 204 No Content on success.;
     }
 
-    /**
+	/**
+	 * @inheritDoc
+	 */
+	public function record_exists(string $zone, string $subdomain, string $rr = 'ANY', string $parameter = null): bool
+	{
+		$api = $this->makeApi($zone);
+		if ($api->dirty()) {
+			// Bust Packet Cache. Domain must be fqdn
+			$api->do('PUT', 'cache/flush?domain=' . $this->makeFqdn($zone, $subdomain, true));
+		}
+		return parent::record_exists($zone, $subdomain, $rr, $parameter);
+	}
+
+	/**
      * Get hosting nameservers
      *
      * @param string|null $domain
@@ -239,7 +270,7 @@ class Module extends \Dns_Module implements ProviderInterface {
         $zone = rtrim($zone, '\.');
         try
         {
-            $api = $this->makeApi();
+            $api = $this->makeApi($zone);
             $api->do('GET', "zones/${zone}");
         }
         catch (ClientException $e)
@@ -277,7 +308,7 @@ class Module extends \Dns_Module implements ProviderInterface {
 
         try
         {
-            $api = $this->makeApi();
+            $api = $this->makeApi($zone);
             // Get zone and rrsets, need to parse the existing rrsets to ensure proper addition of new records
             $zoneData      = $api->do('GET', 'servers/localhost/zones' . sprintf('/%s', $this->makeCanonical($zone)));
             $this->records = $zoneData['rrsets'];
@@ -298,7 +329,7 @@ class Module extends \Dns_Module implements ProviderInterface {
      * Parse existing records for zone, add to records to ensure same named records are not removed
      * Refer to https://doc.powerdns.com/authoritative/http-api/zone.html#rrset under "changetype"
      *
-     * @param \Opcenter\Dns\Record $record
+     * @param Record $record
      *
      * @return array
      */
@@ -312,7 +343,7 @@ class Module extends \Dns_Module implements ProviderInterface {
         {
             if ($rrset['name'] === $name && $rrset['type'] === $record['rr'])
             {
-                $rrset['records'][]  = ['content' => $this->parseRecord($record), 'disabled' => false];
+                $rrset['records'][]  = ['content' => $this->parseParameter($record), 'disabled' => false];
                 $rrset['changetype'] = 'REPLACE';
                 $return[]            = $rrset;
             }
@@ -378,68 +409,33 @@ class Module extends \Dns_Module implements ProviderInterface {
     /**
      * Parse a Record and return the content for the RRSET
      *
-     * @param \Opcenter\Dns\Record $r
+     * @param Record $r
      *
      * @return string
      */
-    private function parseRecord(Record $r): string
+    private function parseParameter(Record $r): string
     {
         $type    = strtoupper($r['rr']);
-        $content = '';
 
         switch ($type)
         {
-            case 'A':
-                $content = $r['parameter'];
-                break;
-            case 'AAAA':
-                $content = $r['parameter'];
-                break;
             case 'CNAME':
                 if ($r['parameter'] === '@' || $r['parameter'] === '127.0.0.1') // If 127.0.0.1, the user hit submit with an empty field that was pre-saved with the default A record value!
                 {
                     $r['parameter'] = $r['zone'];
                 }
 
-                $content = $this->makeCanonical($r['parameter']);
-                break;
-            case 'TXT':
-                $content = $r['parameter'];
-                break;
-            case 'NS':
-                $content = $r['parameter'];
-                break;
-            case 'PTR':
-                $content = $r['parameter'];
-                break;
-            case 'MX':
-                $content = sprintf(
-                    '%d %s',
-                    $r->getMeta('priority'),
-                    $this->makeCanonical($r->getMeta('data'))
-                );
-                break;
-            case 'SRV':
-                // priority | weight | port | hostname/target
-                $content = sprintf(
-                    '%d %d %d %s',
-                    (int) $r->getMeta('priority'),
-                    (int) $r->getMeta('weight'),
-                    (int) $r->getMeta('port'),
-                    $this->makeCanonical($r->getMeta('data'))
-                );
-                break;
+                return $this->makeCanonical($r['parameter']);
             case 'CAA':
-                $content = sprintf(
+                return sprintf(
                 // flags | tag | target
-                    '%d %s %s',
+                    '%d %s "%s"',
                     $r->getMeta('flags'),
                     $r->getMeta('tag'),
                     $r->getMeta('data')
                 );
-                break;
             default:
-                fatal("Unsupported DNS RR type '%s'", $type);
+            	return (string)$r['parameter'];
         }
 
         return $content;
@@ -455,12 +451,11 @@ class Module extends \Dns_Module implements ProviderInterface {
     protected function formatRecord(Record $r): ?array
     {
         $type = strtoupper($r['rr']);
-        $ttl  = $r['ttl'] ?? static::DNS_TTL;
 
         $priority = null;
         $name     = null;
 
-        $content = $this->parseRecord($r);
+        $content = $this->parseParameter($r);
 
         if ($r['name'] === '@')
         {
@@ -468,12 +463,14 @@ class Module extends \Dns_Module implements ProviderInterface {
         }
 
         $rrset = [
-            'records'    => [0 => [
-                'content'  => $content,
-                'disabled' => false,
-            ]],
+            'records'    => [
+            	[
+                	'content'  => $content,
+                	'disabled' => false,
+            	]
+			],
             'name'       => $name ?? $this->makeFqdn($r['zone'], $r['name'], true),
-            'ttl'        => $ttl,
+            'ttl'        => $r['ttl'] ?? null,
             'type'       => $type,
             'changetype' => 'REPLACE',
         ];
@@ -481,7 +478,7 @@ class Module extends \Dns_Module implements ProviderInterface {
         return $rrset;
     }
 
-    /**
+	/**
      * Remove a DNS record
      *
      * @param string      $zone
@@ -506,14 +503,14 @@ class Module extends \Dns_Module implements ProviderInterface {
 
         try
         {
-            $api = $this->makeApi();
+            $api = $this->makeApi($zone);
             // Get zone and rrsets, need to parse the existing rrsets to ensure proper addition of new records
             $zoneData      = $api->do('GET', 'servers/localhost/zones' . sprintf('/%s', $this->makeCanonical($zone)));
             $this->records = $zoneData['rrsets'];
 
             $rrsets = $this->removeRecords($record);
 
-            $ret = $api->do('PATCH', 'zones' . sprintf('/%s', $this->makeCanonical($zone)), ['rrsets' => $rrsets]);
+            $api->do('PATCH', 'zones' . sprintf('/%s', $this->makeCanonical($zone)), ['rrsets' => $rrsets]);
         }
         catch (ClientException $e)
         {
@@ -529,7 +526,7 @@ class Module extends \Dns_Module implements ProviderInterface {
      * Parse existing records for zone, ensure only the deleted record is removed from the same named records
      * Refer to https://doc.powerdns.com/authoritative/http-api/zone.html#rrset under "changetype"
      *
-     * @param \Opcenter\Dns\Record $record
+     * @param Record $record
      *
      * @return array
      */
@@ -573,52 +570,6 @@ class Module extends \Dns_Module implements ProviderInterface {
     }
 
     /**
-     * Creates Record with Zone Creation (not currently implemented)
-     *
-     * @param      $name
-     * @param null $ip
-     *
-     * @return array
-     */
-    protected function createDefaultRecords($name, $ip = null): array
-    {
-        $rrsets = [];
-        $cnames = $this->defaultCnames;
-
-        if (! is_null($ip))
-        {
-            $records[] = [
-                'content'  => $ip,
-                'disabled' => false,
-            ];
-
-            $rrsets[] = [
-                'records' => $records,
-                'name'    => $this->makeCanonical($name),
-                'ttl'     => 14400,
-                'type'    => 'A',
-            ];
-        }
-
-        foreach ($cnames as $cname)
-        {
-            $records = [0 => [
-                'content'  => $this->makeCanonical($name),
-                'disabled' => false,
-            ]];
-
-            $rrsets[] = [
-                'records' => $records,
-                'name'    => $this->makeFqdn($name, $cname, true),
-                'ttl'     => 14400,
-                'type'    => 'CNAME',
-            ];
-        }
-
-        return $rrsets;
-    }
-
-    /**
      * Get raw zone data
      *
      * @param string $domain
@@ -630,11 +581,11 @@ class Module extends \Dns_Module implements ProviderInterface {
     {
         try
         {
-            $api     = $this->makeApi();
+            $api     = $this->makeApi($domain);
             $axfrrec = $api->do('GET', 'servers/localhost/zones' . sprintf('/%s', $this->makeCanonical($domain)) . '/export');
-        }
-        catch (ClientException $e)
-        {
+		}
+		catch (ClientException $e)
+		{
 			// ignore zone does not exist
 			warn("Failed to transfer DNS records from PowerDNS - try again later. Response code: %d", $e->getResponse()->getStatusCode());
 			return null;
@@ -651,28 +602,27 @@ class Module extends \Dns_Module implements ProviderInterface {
      *
      * @return bool
      */
-    protected function atomicUpdate(string $zone, Record $old, Record $new): bool
+    protected function atomicUpdate(string $zone, RecordBase $old, RecordBase $new): bool
     {
-        if (! $this->canonicalizeRecord($zone, $old['name'], $old['rr'], $old['parameter'], $old['ttl']))
-        {
-            return false;
-        }
+		if (! $this->canonicalizeRecord($zone, $old['name'], $old['rr'], $old['parameter'], $old['ttl']))
+		{
+			return false;
+		}
 
-        if (! $this->canonicalizeRecord($zone, $new['name'], $new['rr'], $new['parameter'], $new['ttl']))
-        {
-            return false;
-        }
+		if (! $this->canonicalizeRecord($zone, $new['name'], $new['rr'], $new['parameter'], $new['ttl']))
+		{
+			return false;
+		}
 
         try
         {
-            $api = $this->makeApi();
+            $api = $this->makeApi($zone);
             // Get zone and rrsets, need to parse the existing rrsets to ensure proper addition of new records
             $zoneData      = $api->do('GET', 'servers/localhost/zones' . sprintf('/%s', $this->makeCanonical($zone)));
             $this->records = $zoneData['rrsets'];
-
-            $rrsets = $this->changeRecords($old, $new);
-
-            $api->do('PATCH', 'zones' . sprintf('/%s', $this->makeCanonical($zone)), ['rrsets' => $rrsets]);
+            unset($old['ttl']);
+			$rrsets = $this->changeRecords($old, $new);
+			$api->do('PATCH', 'zones' . sprintf('/%s', $this->makeCanonical($zone)), ['rrsets' => $rrsets]);
         }
         catch (ClientException $e)
         {
@@ -691,65 +641,90 @@ class Module extends \Dns_Module implements ProviderInterface {
     /**
      * Parse existing records for zone, find and remove the old record from the list and add the new one.
      * Refer to https://doc.powerdns.com/authoritative/http-api/zone.html#rrset under "changetype"
+	 *
+	 * Previous record MUST exist
      *
-     * @param \Opcenter\Dns\Record $old
-     * @param \Opcenter\Dns\Record $new
+     * @param Record $old
+     * @param Record $new
      *
      * @return array
      */
     private function changeRecords(Record $old, Record $new): array
-    {
-        $return = [];
+	{
+		$oldName = $this->replaceMarker($old['zone'], $old['name']);
+		$newName = $this->replaceMarker($new['zone'], $new['name']);
 
-        $oldName = $this->replaceMarker($old['zone'], $old['name']);
-        $newName = $this->replaceMarker($new['zone'], $new['name']);
+		$remove = [];
+		$add = [];
 
-        $added = false; // Did we add the record to an existing rrset?
+		// @TODO rewrite to use Record::is()
+		$paramMatch = $this->parseParameter($old);
+		foreach ($this->records as $rrset) {
+			if ($rrset['name'] === $oldName && $rrset['type'] === $old['rr']) {
+				// enumerate old records to determine change set
+				if ($old['ttl'] && $rrset['ttl'] !== $old['ttl']) {
+					continue;
+				}
+				if (null === $new['ttl']) {
+					$new['ttl'] = $rrset['ttl'];
+				}
+				// remove record
+				$remove = $rrset['records'];
+				foreach ($remove as $idx => $r) {
+					if ($r['content'] !== $paramMatch) {
+						continue;
+					}
+					unset($remove[$idx]);
+				}
 
-        foreach ($this->records as $rrset)
-        {
-            if ($rrset['name'] === $oldName && $rrset['type'] === $old['rr'])
-            {
-                if (count($rrset['records']) > 1) // More than one record, loop through and delete just the record
-                {
-                    foreach ($rrset['records'] as $k => $rrec)
-                    {
-                        if ($rrec['content'] === $old['parameter'])
-                        {
-                            unset($rrset['records'][ $k ]);
-                            $rrset['records'] = array_values($rrset['records']);
-                        }
-                    }
-                }
-                else
-                {
-                    // Only 1 record, just delete the rrset.
-                    $return[] = [
-                        'records'    => '',
-                        'name'       => $oldName,
-                        'changetype' => 'DELETE',
-                        'type'       => $old['rr'],
-                    ];
-                }
-            }
+				// has more records
+				$remove = [
+					'name' => $rrset['name'],
+					'records' => $remove,
+					'ttl' => $rrset['ttl'],
+					'comments' => $rrset['comments'],
+					'type' => $rrset['type'],
+					'changetype' => empty($remove) ? 'DELETE' : 'REPLACE'
+				];
+				if (empty($remove['records'])) {
+					array_forget($remove, ['comments', 'ttl']);
+				}
+			} else if ($rrset['name'] === $newName && $rrset['type'] === $new['rr']) {
+				if ($new['ttl'] && $rrset['ttl'] !== $new['ttl']) {
+					continue;
+				}
+				$add = $rrset;
+			}
+		}
 
-            if ($rrset['name'] === $newName && $rrset['type'] === $new['rr'])
-            {
-                $rrset['records'][]  = ['content' => $this->parseRecord($new), 'disabled' => false];
-                $rrset['changetype'] = 'REPLACE';
-                $return[]            = $rrset;
+		if (!$add) {
+			// records updated in same set
+			$add = $this->formatRecord($new);
+			if (empty($remove['records']) && $add['name'] === $remove['name'] && $add['type'] === $remove['type']) {
+				return [$add];
+			}
+			return [$add, $remove];
+		}
 
-                $added = true;
-            }
-        }
-
-        // No records match the name and type, let's create a new record set
-        if (true !== $added)
-        {
-            $return[] = $this->formatRecord($new);
-        }
-
-        return $return;
+		// merge cherry-picked records into existing record set
+		$records = [
+			array_replace([
+				'name'       => $this->makeFqdn($new->getZone(), $new['name'], true),
+				'type'       => $new['rr'],
+				'records'    => $add,
+				'changetype' => 'REPLACE'
+			], $this->formatRecord($new))
+		];
+		if (!empty($remove)) {
+			array_unshift($records, [
+				'name'       => $this->makeFqdn($old->getZone(), $old['name'], true),
+				'type'       => $old['rr'],
+				'ttl'        => $remove['ttl'],
+				'comments'   => $remove['comments'],
+				'changetype' => empty($remove) ? 'DELETE' : 'REPLACE',
+			] + $remove);
+		}
+        return $records;
     }
 
     /**
@@ -760,26 +735,5 @@ class Module extends \Dns_Module implements ProviderInterface {
     protected function hasCnameApexRestriction(): bool
     {
         return true;
-    }
-
-    /**
-     * Strip the zone and trailing . from a subdomain/name entry
-     *
-     * @param $zone
-     * @param $subdomain
-     *
-     * @return string
-     */
-    private function stripName($zone, $subdomain): string
-    {
-        $zone      = rtrim($zone, '\.');
-        $subdomain = rtrim($subdomain, '\.');
-
-        if (strpos($subdomain, $zone) !== false)
-        {
-            $subdomain = str_replace($zone, '', $subdomain);
-        }
-
-        return rtrim($subdomain, '\.');
     }
 }

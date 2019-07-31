@@ -14,7 +14,13 @@ powerdns_packages:
 
 powerdns_local_dir: "/etc/pdns/local.d"
 powerdns_config_file: /etc/pdns/pdns.conf
+# PowerDNS database backend, mysql or pgsql
 powerdns_driver: mysql
+# Duration for Packet Cache
+# @XXX To avoid false positives, all participating nodes MUST have
+# pdns.deadline set to this value in auth.yml
+powerdns_packet_cache_ttl: 20
+
 powerdns_api_port: 8081
 
 # Code installation
@@ -31,9 +37,20 @@ powerdns_db_host: >-
   {{ lookup('pipe', 'grep -e "^\s*g' + powerdns_driver + '-host\s*=" ' + (powerdns_config_file | quote) + ' | cut -d= -f2') | default('localhost', true) | trim }}
 powerdns_api_key: >-
   {{ lookup('pipe', 'grep -e "^\s*api-key\s*=" ' + (powerdns_config_file | quote) + ' | cut -d= -f2') | default(lookup('password', '/dev/null chars=ascii_letters length=24'), true) | trim }}
+# Default configuration in auth.yml if not set
+powerdns_skeleton:
+  pdns:
+    uri: "http://localhost:{{ powerdns_api_port }}/api/v1"
+    key: "{{ __powerdns_api_key }}"
+    ns:
+      - 127.0.0.1
+    deadline: "{{ powerdns_packet_cache_ttl }}"
+
 powerdns_config:
   api: yes
-  "api-key": "{{ powerdns_api_key }}"
+  "api-key": "{{ __powerdns_api_key }}"
+  # PacketCache will cause false positives in record_exists()
+  "cache-ttl": "{{ powerdns_packet_cache_ttl | int }}"
   "include-dir": "{{ powerdns_local_dir }}"
   webserver: "{{ powerdns_webserver_enable | default((powerdns_version is version('4.1', '>=')) | ternary('no', 'yes')) }}"
   "webserver-address": >-

@@ -8,6 +8,7 @@
 
 - set_fact:
     __powerdns_db_password: "{{ powerdns_db_password }}"
+    __powerdns_api_key: "{{ powerdns_api_key }}"
 
 - name: Create RPM repo configuration
   template:
@@ -33,6 +34,19 @@
     permanent: yes
   with_items:
     - service: dns
+
+- name: Extract pdns configuration from auth.yml
+  include_vars:
+    name: __authcfg
+    file: "{{ apnscp_root }}/config/auth.yaml"
+- name: Combine pdns configuration
+  set_fact:
+    __powerdns_skeleton: "{{ powerdns_skeleton | combine(__authcfg | default({}), recursive=True) }}"
+- name: Update auth.yaml configuration
+  copy:
+    content: "{{ __powerdns_skeleton | to_nice_yaml(indent=2) }}"
+    dest: "{{ apnscp_root }}/config/auth.yaml"
+  notify: Restart apnscp
 
 - name: Install provider module
   include_role: name=common/addin tasks_from="{{ powerdns_enabled | ternary('install', 'remove') }}-library.yml"
