@@ -57,12 +57,21 @@ ansible-playbook addin.yml --extra-vars=addin=apnscp-powerdns
 
 allow-axfr-ips and also-notify directives will be set whenever the addin plays are run.
 
-### Restricting submission access
+### Enabling ALIAS support
+ALIAS is a synthetic record that allows CNAME records to be set on the zone apex. ALIAS records require `powerdns_enable_recursion` to be enabled as well as an optional `powerdns_recursive_ns` to be set otherwise it will default to the system in `/etc/resolv.conf`. 
 
+```bash
+cpcmd config:set apnscp.bootstrapper powerdns_enable_recursion true
+cpcmd config:set apnscp.bootstrapper powerdns_recursive_ns '[1.1.1.1,1.0.0.1]'
+# Then re-run the addin...
+cd /usr/local/apnscp/resources/playbooks
+ansible-playbook addin.yml --extra-vars=addin=apnscp-powerdns
+```
+
+## Remote API access
 In the above example, only local requests may submit DNS modifications to the server. None of the below examples affect querying; DNS queries occur over 53/UDP typically (or 53/TCP if packet size exceeds UDP limits). Depending upon infrastructure, there are a few options to securely accept record submission, *all of which require an API key for submission*.
 
-#### SSL + Apache
-
+### SSL + Apache
 Apache's `ProxyPass` directive send requests to the backend. Brute-force attempts are protected by [mod_evasive](https://github.com/apisnetworks/mod_evasive ) bundled with apnscp. Requests over this medium are protected by SSL, without HTTP/2 to ameliorate handshake overhead. In all but the very high volume API request environments, this will be acceptable.
 
 In this situation, the endpoint is https://myserver.apnscp.com/dns. Changes are made to `/etc/httpd/conf/httpd-custom.conf` within the `<VirtualHost ... :443>` bracket (with `SSLEngine On`!). After adding the below changes, `systemctl restart httpd`.
@@ -83,7 +92,7 @@ In the above example, API requests can be made via https://myserver.apnscp.com/d
 curl -q -H 'X-API-Key: SOMEKEY' https://myserver.apnscp.com/dns/api/v1/servers/localhost 
 ```
 
-##### Disabling brute-force throttling
+#### Disabling brute-force throttling
 
 As hinted above, placing PowerDNS behind Apache confers brute-force protection by mod_evasive. By default, 10 of the same requests in 2 seconds can trigger a brute-force block. Two solutions exist, either  raise the same-page request threshold or disable mod_evasive.
 
@@ -99,7 +108,7 @@ Working off the example above *<Location /dns> ... </Location>*
 </Location>
 ```
 
-#### Standalone server
+### Standalone server
 
 PowerDNS can also run by itself on a different port. In this situation, the network is configured to block all external requests to port 8081 except those whitelisted. For example, if the entire 32.12.1.1-32.12.1.255 network can be trusted and under your control, then whitelist the IP range:
 
@@ -139,11 +148,13 @@ pdns:
   ns: 
     - ns1.yourdomain.com
     - ns2.yourdomain.com
+  recursion: false
     ## Optional additional nameservers
 ```
 * `uri` value is the hostname of your master PowerDNS server running the HTTP API webserver (without a trailing slash)
 * `key` value is the **API Key** in `pdns.conf` on the master nameserver. 
 * `ns` value is a list of nameservers as in the example above.  Put nameservers on their own lines prefixed with a hyphen and indented accordingly.  There is not currently a limit for the number of nameservers you may use, 2-5 is typical and should be geographically distributed per RFC 2182.
+* `recursion` controls ALIAS records, which are CNAMEs on apex (RFC 1034). Enabling requires configuration of `resolver` and `expand-alias` in pdns.conf.
 
 ### Setting as default
 

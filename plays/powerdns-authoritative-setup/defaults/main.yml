@@ -21,6 +21,9 @@ powerdns_driver: mysql
 # pdns.deadline set to this value in auth.yml
 powerdns_packet_cache_ttl: 20
 
+# required for ALIAS flattening
+powerdns_enable_recursion: false
+powerdns_recursive_ns: "{{ dns_robust_nameservers |  map('regex_replace', '^([^:]+)$', '\\1:53') | list | join(',') }}"
 powerdns_api_port: 8081
 
 # Code installation
@@ -45,6 +48,7 @@ powerdns_skeleton:
     ns:
       - 127.0.0.1
     deadline: "{{ powerdns_packet_cache_ttl }}"
+    recursion: "{{ powerdns_enable_recursion }}"
 
 powerdns_config:
   api: yes
@@ -64,6 +68,8 @@ powerdns_config:
   "g{{powerdns_driver}}-dbname": "{{ powerdns_db_name }}"
   "g{{powerdns_driver}}-host": "{{ powerdns_db_host }}"
   version-string: anonymous
+  expand-alias: "{{ powerdns_enable_recursion | ternary('yes', 'no') }}"
+  resolver: "{{ powerdns_enable_recursion | ternary(powerdns_recursive_ns, 'no') }}"
 
 # Inject overrides via powerdns_custom_config
 # powerdns_custom_config:

@@ -5,7 +5,9 @@
 - assert:
     that: powerdns_driver in ['mysql','pgsql']
     fail_msg: "Unknown driver {{ powerdns_driver }}"
-
+- assert:
+    that: powerdns_version is version('4.1', '>=') or not powerdns_enable_recursion
+    fail_msg: "PowerDNS recursion requires PowerDNS 4.1+ - {{ powerdns_version }} requested"
 - set_fact:
     __powerdns_db_password: "{{ powerdns_db_password }}"
     __powerdns_api_key: "{{ powerdns_api_key }}"
