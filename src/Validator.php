@@ -24,7 +24,7 @@ class Validator implements ServiceProvider {
     {
         try
         {
-            (new Api())->do('GET', 'servers');
+            (new Api())->do('GET', 'statistics');
         }
         catch (RequestException $e)
         {
