@@ -17,12 +17,23 @@
 	{
 		protected $ttl = Module::DNS_TTL;
 
+		public function __construct(string $zone, array $args)
+		{
+
+			parent::__construct($zone, $args);
+		}
+
 		protected function formatCaa()
 		{
 			return $this->appendDot();
 		}
 
 		protected function formatCname()
+		{
+			return $this->appendDot();
+		}
+
+		protected function formatAlias()
 		{
 			return $this->appendDot();
 		}
@@ -39,6 +50,7 @@
 
 		protected function formatMx()
 		{
+			$this->parameter = str_replace("\t", " ", $this->parameter);
 			return $this->appendDot();
 		}
 
@@ -51,6 +63,15 @@
 		protected function formatSrv()
 		{
 			return $this->appendDot();
+		}
+
+		protected function formatTxt() {
+			// PowerDNS requires all space-delimited sets of TXT records to be quoted
+			// ensure last segment has terminating quotes
+			$this->parameter = (string)preg_replace('/^((?:(?:"(?>[^"]+)(?>"\s*)))*)(?!")(.+)$/', '\1"\2"', $this->parameter);
+			if ($this->parameter && $this->parameter[0] === '"' && $this->parameter[0] === $this->parameter[-1]) {
+				$this->parameter = '"' . trim($this->parameter, '"') . '"';
+			}
 		}
 
 		protected function formatUri()
