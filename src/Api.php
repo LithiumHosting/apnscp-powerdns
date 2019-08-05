@@ -28,6 +28,14 @@ class Api {
      */
     protected $lastResponse;
 
+	/**
+	 * @var int last destructive action
+	 */
+    private $lastModification;
+
+	// @var int deadline for Packet Cache queries
+	private $deadline;
+
     /**
      * Api constructor.
      */
@@ -38,6 +46,8 @@ class Api {
         $this->client   = new \GuzzleHttp\Client([
             'base_uri' => rtrim($this->endpoint, '/') . '/',
         ]);
+        $this->lastModification = time();
+        $this->deadline = defined('AUTH_PDNS_DEADLINE') ? (int)AUTH_PDNS_DEADLINE : 20;
     }
 
     public function do(string $method, string $endpoint, array $params = null): array
@@ -49,12 +59,19 @@ class Api {
 
             return [];
         }
-        if ($endpoint[0] === '/')
-        {
-            warn("Stripping `/' from endpoint `%s', remove the trailing / from auth.yaml", $endpoint);
-            $endpoint = ltrim($endpoint, '/');
-        }
-        if (strpos($endpoint, 'servers') === false)
+
+
+		if ($endpoint[0] === '/')
+		{
+			warn("Stripping `/' from endpoint `%s', remove the trailing / from auth.yaml", $endpoint);
+			$endpoint = ltrim($endpoint, '/');
+		}
+
+		if ($method !== 'GET' && 0 !== strpos('cache/flush?', $endpoint)) {
+			$this->lastModification = time();
+		}
+
+		if (strpos($endpoint, 'servers/') === false)
         {
             $endpoint = 'servers/localhost/' . $endpoint;
         }
@@ -74,4 +91,21 @@ class Api {
     {
         return $this->lastResponse;
     }
+
+	/**
+	 * Get last modification time
+	 *
+	 * Used to bypass Packet Cache
+	 *
+	 * @return int
+	 */
+    public function getLastModification(): int
+	{
+		return $this->lastModification;
+	}
+
+	public function dirty(): bool
+	{
+		return (time() - $this->lastModification) <= $this->deadline;
+	}
 }
