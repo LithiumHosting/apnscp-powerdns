@@ -50,7 +50,6 @@
 		 */
 		private $apis;
 		private $ns;
-		private $key;
 		private $records;
 
 		public function __construct()
@@ -62,6 +61,12 @@
 			$this->ns      = defined('AUTH_PDNS_NS') ? AUTH_PDNS_NS : AUTH_PDNS; // Backwards compatible
 			$this->records = [];
 			$this->apis = [];
+		}
+
+		public function __sleep()
+		{
+			$this->apis = [];
+			return array_keys(get_object_vars($this));
 		}
 
 		/**
