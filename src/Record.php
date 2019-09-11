@@ -23,11 +23,6 @@
 			parent::__construct($zone, $args);
 		}
 
-		protected function formatCaa()
-		{
-			return $this->appendDot();
-		}
-
 		protected function formatCname()
 		{
 			return $this->appendDot();

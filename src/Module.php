@@ -332,7 +332,6 @@
 				'parameter' => $param,
 				'ttl'       => $ttl,
 			]);
-
 			try
 			{
 				$api = $this->makeApi($zone);
@@ -459,7 +458,7 @@
 						'%d %s "%s"',
 						$r->getMeta('flags'),
 						$r->getMeta('tag'),
-						$r->getMeta('data')
+						trim($r->getMeta('data'), '"')
 					);
 				default:
 					return str_replace("\t", ' ', (string)$r['parameter']);
