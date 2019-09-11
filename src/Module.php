@@ -592,7 +592,7 @@
 			}
 
 			// No records match the name and type, let's create a new record set
-			if (empty($return))
+			if (empty($return) || empty($return['records']))
 			{
 				$return[] = [
 					'records'    => '',
