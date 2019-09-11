@@ -544,7 +544,6 @@
 				$this->records = $zoneData['rrsets'];
 
 				$rrsets = $this->removeRecords($record);
-
 				$api->do('PATCH', 'zones' . sprintf('/%s', $this->makeCanonical($zone)), ['rrsets' => $rrsets]);
 			}
 			catch (ClientException $e)
@@ -590,15 +589,16 @@
 					$return[] = $rrset;
 				}
 			}
-
 			// No records match the name and type, let's create a new record set
-			if (empty($return) || empty($return['records']))
+			if (empty($return) || empty(current($return)['records']))
 			{
-				$return[] = [
-					'records'    => '',
-					'name'       => $name,
-					'changetype' => 'DELETE',
-					'type'       => $record['rr'],
+				$return = [
+					[
+						'records'    => '',
+						'name'       => $name,
+						'changetype' => 'DELETE',
+						'type'       => $record['rr'],
+					]
 				];
 			}
 
