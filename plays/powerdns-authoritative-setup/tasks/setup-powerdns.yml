@@ -1,4 +1,15 @@
 ---
+- name: Create RPM repo configuration
+  template:
+    src: templates/powerdns.repo.j2
+    dest: "{{ powerdns_repo_config }}"
+
+- name: Install PowerDNS RPMs
+  yum:
+    name: "{{ powerdns_packages }}"
+    state: present
+    lock_timeout: 300
+
 - name: Merge custom config
   include_role: name=common tasks_from="implicitly-import-overrides.yml"
   vars:

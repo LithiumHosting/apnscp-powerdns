@@ -12,19 +12,11 @@
     __powerdns_db_password: "{{ powerdns_db_password }}"
     __powerdns_api_key: "{{ powerdns_api_key }}"
 
-- name: Create RPM repo configuration
-  template:
-    src: templates/powerdns.repo.j2
-    dest: "{{ powerdns_repo_config }}"
-
-- name: Install PowerDNS RPMs
-  yum:
-    name: "{{ powerdns_packages }}"
-    state: "{{ powerdns_enabled | ternary('present', 'absent') }}"
-    lock_timeout: 300
 - name: Setup PowerDNS
   include_tasks: setup-powerdns.yml
-  when: powerdns_enabled | bool
+  when:
+    - powerdns_enabled | bool
+    - not (powerdns_apionly | bool)
 
 - name: "{{ powerdns_enabled | ternary('Enable', 'Disable') }} firewall ports"
   include_role: name=network/setup-firewall tasks_from=add-firewall.yml
@@ -37,13 +29,22 @@
   with_items:
     - service: dns
 
+- name: Remove PowerDNS RPMs
+  yum:
+    name: "{{ powerdns_packages }}"
+    state: absent
+    lock_timeout: 300
+  when: powerdns_apionly or not (powerdns_enabled | bool)
+
 - name: Extract pdns configuration from auth.yml
   include_vars:
     name: __authcfg
     file: "{{ apnscp_root }}/config/auth.yaml"
+
 - name: Combine pdns configuration
   set_fact:
     __powerdns_skeleton: "{{ powerdns_skeleton | combine(__authcfg | default({}), recursive=True) }}"
+
 - name: Update auth.yaml configuration
   copy:
     content: "{{ __powerdns_skeleton | to_nice_yaml(indent=2) }}"

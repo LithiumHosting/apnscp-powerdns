@@ -5,19 +5,14 @@ This is a drop-in provider for [apnscp](https://apnscp.com) to enable DNS suppor
 ## Nameserver installation
 
 ### Local PowerDNS 
-Clone the repository into the Bootstrapper addin path. Note this requires either apnscp v3.1 or apnscp v3.0.47 minimum to work.  
-```bash
-upcp
-cd /usr/local/apnscp/resources/playbooks
-git clone https://github.com/LithiumHosting/apnscp-powerdns.git addins/apnscp-powerdns
-ansible-playbook addin.yml --extra-vars=addin=apnscp-powerdns
-```
-
 *PostgreSQL can be used by specifying powerdns_driver=pgsql, cpcmd config:set will accomplish this:*
 
 ```bash
+cpcmd config:set apnscp.bootstrapper powerdns_enabled true
 cpcmd config:set apnscp.bootstrapper powerdns_driver pgsql
-ansible-playbook addin.yml --extra-vars=addin=apnscp-powerdns
+upcp -sb software/powerdns
+# Optionally set all accounts to use PowerDNS
+cpcmd config:set dns.default-provider powerdns
 ```
 
 PowerDNS is now setup to accept requests on port 8081. Requests require an authorization key that can be found in `/etc/pdns/pdns.conf`
@@ -34,16 +29,15 @@ apnscp provides a DNS-only license class that allows apnscp to run on a server w
 
 ### Remote PowerDNS (alternate install)
 Alternatively, apnscp can be configured to connect to a remote PowerDNS server.  This is useful if running a DNS cluster and want every apnscp server to connect to it.
-```bash
-upcp
-cd /usr/local/apnscp
-git submodule add https://github.com/LithiumHosting/apnscp-powerdns.git resources/playbooks/addins/apnscp-powerdns
-ln -rs resources/playbooks/addins/apnscp-powerdns/src lib/Opcenter/Dns/Providers/Powerdns
-```
-Proced with the setup in section "apnscp DNS provider setup" below.  The API key will be sourced from your remote server.
 
-#### git submodule vs git clone usage
-Astute observers will notice `git clone` used in the first example and `git submodule` in the above. Any submodule added to apnscp will automatically update with `upcp`. Any repository cloned via `git clone` **is not** updated with `upcp`. The choice is yours.
+```bash
+cpcmd config:set apnscp.bootstrapper powerdns_enabled true
+cpcmd config:set apnscp.bootstrapper powerdns_apionly true
+upcp -sb software/powerdns
+cpcmd config:et dns.default-provider powerdns
+```
+
+Proced with the setup in section "apnscp DNS provider setup" below.  The API key will be sourced from your remote server.
 
 ### Idempotently changing configuration
 
