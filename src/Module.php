@@ -369,9 +369,21 @@
 			{
 				if ($rrset['name'] === $name && $rrset['type'] === $record['rr'])
 				{
-					$rrset['records'][]  = ['content' => $this->parseParameter($record), 'disabled' => false];
 					$rrset['changetype'] = 'REPLACE';
-					$return[]            = $rrset;
+					// filter duplicate
+					foreach ($rrset['records'] as $chk) {
+						if ($record->is(new Record($record->getZone(), [
+							'name' => (string)$record['name'],
+							'rr' => $rrset['type'],
+							'parameter' => $chk['content']])))
+						{
+							$return[] = $rrset;
+							// dupe, leave this damned maze
+							break 2;
+						}
+					}
+					$rrset['records'][]  = ['content' => $this->parseParameter($record), 'disabled' => false];
+					$return[] = $rrset;
 				}
 			}
 
