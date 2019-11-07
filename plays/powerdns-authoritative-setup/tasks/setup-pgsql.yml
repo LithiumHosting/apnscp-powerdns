@@ -1,15 +1,13 @@
 ---
-- name: Verify {{ appliance_user }} user exists
+- name: Verify {{ powerdns_db_user }} user exists
   postgresql_user:
-    role_attr_flags: SUPERUSER
     name: "{{ powerdns_db_user }}"
     encrypted: yes
     password: "{{ __powerdns_db_password}}"
     state: present
+    login_user: root
   register: user_exists
   notify: Restart PowerDNS
-  become_user: postgres
-  become: yes
 
 - name: Verify {{ powerdns_db_name }} database exists
   postgresql_db:
@@ -17,9 +15,8 @@
     owner: "{{ powerdns_db_user }}"
     template: template1
     state: present
+    login_user: root
   register: db_exists
-  become_user: postgres
-  become: yes
 
 - name: Create {{ powerdns_db_name }} database
   postgresql_db:
@@ -32,14 +29,3 @@
     login_host: 127.0.0.1
   when: db_exists.changed
   notify: Restart PowerDNS
-
-- name: Verify {{powerdns_db_user}} grants
-  postgresql_privs:
-    db: template1
-    privs: ALL
-    obj: "{{ powerdns_db_name }}"
-    role: "{{ powerdns_db_user }}"
-    type: database
-    state: present
-  become_user: postgres
-  become: yes
