@@ -29,6 +29,5 @@
     state: present
     login_user: root
     update_password: "{{ (need_update.rc != 0) | ternary('always', 'on_create') }}"
-    check_implicit_admin: yes
   register: user_exists
   notify: Restart PowerDNS
