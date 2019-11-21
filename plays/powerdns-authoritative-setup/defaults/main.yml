@@ -33,16 +33,11 @@ powerdns_api_port: 8081
 addin_provider_name: Powerdns
 addin_integration_type: "{{ (apnscp_debug | bool) | ternary('link', 'copy') }}"
 
-powerdns_db_password: >-
-  {{ lookup('pipe', 'grep -e "^\s*g' + powerdns_driver + '-password\s*=" ' + (powerdns_config_file | quote) + ' | cut -d= -f2') | default(lookup('password', '/dev/null chars=ascii_letters length=24'), true) | trim }}
-powerdns_db_user: >-
-  {{ lookup('pipe', 'grep -e "^\s*g' + powerdns_driver + '-user\s*=" ' + (powerdns_config_file | quote) + ' | cut -d= -f2') | default('powerdns', true) | trim }}
-powerdns_db_name: >-
-  {{ lookup('pipe', 'grep -e "^\s*g' + powerdns_driver + '-dbname\s*=" ' + (powerdns_config_file | quote) + ' | cut -d= -f2') | default('powerdns', true) | trim }}
-powerdns_db_host: >-
-  {{ lookup('pipe', 'grep -e "^\s*g' + powerdns_driver + '-host\s*=" ' + (powerdns_config_file | quote) + ' | cut -d= -f2') | default('localhost', true) | trim }}
-powerdns_api_key: >-
-  {{ lookup('pipe', 'grep -e "^\s*api-key\s*=" ' + (powerdns_config_file | quote) + ' | cut -d= -f2') | default(lookup('password', '/dev/null chars=ascii_letters length=24'), true) | trim }}
+powerdns_db_password: "{{ lookup('pipe', 'grep -e \"^\\s*g' + powerdns_driver + '-password\\s*=\" ' + (powerdns_config_file | quote) + ' | cut -d= -f2') | default(lookup('password', '/dev/null chars=ascii_letters length=24'), true) | trim }}"
+powerdns_db_user: "{{ lookup('pipe', 'grep -e \"^\\s*g' + powerdns_driver + '-user\\s*=\" ' + (powerdns_config_file | quote) + ' | cut -d= -f2') | default('powerdns', true) | trim }}"
+powerdns_db_name: "{{ lookup('pipe', 'grep -e \"^\\s*g' + powerdns_driver + '-dbname\\s*=\" ' + (powerdns_config_file | quote) + ' | cut -d= -f2') | default('powerdns', true) | trim }}"
+powerdns_db_host: "{{ lookup('pipe', 'grep -e \"^\\s*g' + powerdns_driver + '-host\\s*=\" ' + (powerdns_config_file | quote) + ' | cut -d= -f2') | default('localhost', true) | trim }}"
+powerdns_api_key: "{{ lookup('pipe', 'grep -e \"^\\s*api-key\\s*=\" ' + (powerdns_config_file | quote) + ' | cut -d= -f2') | default(lookup('password', '/dev/null chars=ascii_letters length=24'), true) | trim }}"
 # Default configuration in auth.yml if not set
 powerdns_skeleton:
   pdns:
@@ -53,6 +48,8 @@ powerdns_skeleton:
     deadline: "{{ powerdns_packet_cache_ttl }}"
     recursion: "{{ powerdns_enable_recursion }}"
 
+# line chomping indicator broken in 2.9.0/2.9.1
+# Using LCI + undefined variable halts evaluation of keyed expressions, merge expressions into single line
 powerdns_config:
   api: yes
   "api-key": "{{ __powerdns_api_key }}"
@@ -60,10 +57,8 @@ powerdns_config:
   "cache-ttl": "{{ powerdns_packet_cache_ttl | int }}"
   "include-dir": "{{ powerdns_local_dir }}"
   webserver: "{{ powerdns_webserver_enable | default((powerdns_version is version('4.1', '>=')) | ternary('no', 'yes')) }}"
-  "webserver-address": >-
-    {{ powerdns_api_listen | default(powerdns_localonly | ternary('127.0.0.1', '0.0.0.0')) }}
-  "webserver-allow-from": >-
-    {{ powerdns_api_whitelist | default(powerdns_localonly | ternary('127.0.0.1,::1', '0.0.0.0,::/0')) }}
+  "webserver-address": "{{ powerdns_api_listen | default(powerdns_localonly | ternary('127.0.0.1', '0.0.0.0')) }}"
+  "webserver-allow-from": "{{ powerdns_api_whitelist | default(powerdns_localonly | ternary('127.0.0.1,::1', '0.0.0.0,::/0')) }}"
   "webserver-port": "{{ powerdns_api_port }}"
   launch: "g{{ powerdns_driver }}"
   "g{{powerdns_driver}}-password": "{{ __powerdns_db_password }}"

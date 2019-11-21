@@ -21,9 +21,9 @@
 - name: Update {{ powerdns_config_file }}
   lineinfile:
     path: "{{ powerdns_config_file }}"
-    regexp: '^\s*{{ item.key |quote }}\s*='
+    regexp: '^\s*{{ item.key | regex_escape() }}\s*='
     line: '{{ item.key }}={{ item.value }}'
-  with_dict: "{{ __config }}"
+  loop: "{{ __config | dict2items }}"
   notify: Restart PowerDNS
 
 - name: Create PowerDNS configuration directory
