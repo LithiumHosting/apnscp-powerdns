@@ -22,8 +22,16 @@
   lineinfile:
     path: "{{ powerdns_config_file }}"
     regexp: '^\s*{{ item.key | regex_escape() }}\s*='
-    line: '{{ item.key }}={{ item.value }}'
-  loop: "{{ __config | dict2items }}"
+    line: '{{ item.key | string }}={{ item.value }}'
+  loop: "{{ powerdns_config | dict2items }}"
+  notify: Restart PowerDNS
+
+- name: Set PowerDNS driver credentials
+  lineinfile:
+    path: "{{ powerdns_config_file }}"
+    regexp: '^\s*g{{powerdns_driver}}-{{ item.key | regex_escape() }}\s*='
+    line: 'g{{powerdns_driver}}-{{ item.key | string }}={{ item.value }}'
+  with_dict: "{{ powerdns_driver_config }}"
   notify: Restart PowerDNS
 
 - name: Create PowerDNS configuration directory
