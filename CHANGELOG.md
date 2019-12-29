@@ -28,3 +28,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [1.0.3] 2019-07-28
 ### Fixed
 - Merged Pull Request to address various issues
+
+## [1.0.4] 2019-12-29
+### Added
+- Added domain type selection in src/Module.php
+- Added extra config param and description in README.md
+### Changed
+- Changed LICENSE year
+### Fixed
+- Fixed README.md commands and trailing spaces

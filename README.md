@@ -4,7 +4,7 @@ This is a drop-in provider for [apnscp](https://apnscp.com) to enable DNS suppor
 
 ## Nameserver installation
 
-### Local PowerDNS 
+### Local PowerDNS
 *PostgreSQL can be used by specifying powerdns_driver=pgsql, cpcmd config:set will accomplish this:*
 
 ```bash
@@ -34,7 +34,7 @@ Alternatively, apnscp can be configured to connect to a remote PowerDNS server. 
 cpcmd config:set apnscp.bootstrapper powerdns_enabled true
 cpcmd config:set apnscp.bootstrapper powerdns_apionly true
 upcp -sb software/powerdns
-cpcmd config:et dns.default-provider powerdns
+cpcmd config:set dns.default-provider powerdns
 ```
 
 Proced with the setup in section "apnscp DNS provider setup" below.  The API key will be sourced from your remote server.
@@ -52,7 +52,7 @@ ansible-playbook addin.yml --extra-vars=addin=apnscp-powerdns
 allow-axfr-ips and also-notify directives will be set whenever the addin plays are run.
 
 ### Enabling ALIAS support
-ALIAS is a synthetic record that allows CNAME records to be set on the zone apex. ALIAS records require `powerdns_enable_recursion` to be enabled as well as an optional `powerdns_recursive_ns` to be set otherwise it will default to the system in `/etc/resolv.conf`. 
+ALIAS is a synthetic record that allows CNAME records to be set on the zone apex. ALIAS records require `powerdns_enable_recursion` to be enabled as well as an optional `powerdns_recursive_ns` to be set otherwise it will default to the system in `/etc/resolv.conf`.
 
 ```bash
 cpcmd config:set apnscp.bootstrapper powerdns_enable_recursion true
@@ -77,13 +77,13 @@ In this situation, the endpoint is https://myserver.apnscp.com/dns. Changes are 
 </Location>
 ```
 
-**Downsides**: minor SSL overhead. Dependent upon Apache.  
-**Upsides**: easy to setup. Protected by threat deterrence. PowerDNS accessible remotely via an easily controlled URI.  
+**Downsides**: minor SSL overhead. Dependent upon Apache.
+**Upsides**: easy to setup. Protected by threat deterrence. PowerDNS accessible remotely via an easily controlled URI.
 
-In the above example, API requests can be made via https://myserver.apnscp.com/dns, e.g. 
+In the above example, API requests can be made via https://myserver.apnscp.com/dns, e.g.
 
 ```bash
-curl -q -H 'X-API-Key: SOMEKEY' https://myserver.apnscp.com/dns/api/v1/servers/localhost 
+curl -q -H 'X-API-Key: SOMEKEY' https://myserver.apnscp.com/dns/api/v1/servers/localhost
 ```
 
 #### Disabling brute-force throttling
@@ -118,13 +118,13 @@ cd /usr/local/apnscp/resources/playbooks
 ansible-playbook addin.yml --extra-vars=addin=apnscp-powerdns
 ```
 
-**Downsides**: requires whitelisting IP addresses for access to API server. Must run on port different than Apache.  
-**Upsides**: operates independently from Apache.  
+**Downsides**: requires whitelisting IP addresses for access to API server. Must run on port different than Apache.
+**Upsides**: operates independently from Apache.
 
 The server may be accessed once the source IP has been whitelisted,
 
 ```bash
-curl -q -H 'X-API-Key: SOMEKEY' http://myserver.apnscp.com/api/v1/servers/localhost 
+curl -q -H 'X-API-Key: SOMEKEY' http://myserver.apnscp.com/api/v1/servers/localhost
 ```
 
 
@@ -139,14 +139,16 @@ pdns:
   # This url may be different if using running PowerDNS in standalone
   uri: https://myserver.apnscp.com/dns/api/v1
   key: your_api_key_here
-  ns: 
+  type: native
+  ns:
     - ns1.yourdomain.com
     - ns2.yourdomain.com
   recursion: false
     ## Optional additional nameservers
 ```
 * `uri` value is the hostname of your master PowerDNS server running the HTTP API webserver (without a trailing slash)
-* `key` value is the **API Key** in `pdns.conf` on the master nameserver. 
+* `key` value is the **API Key** in `pdns.conf` on the master nameserver.
+* `type` value defines **domain type** for replication. It's usually set to `native` when using DB replication, and to `master` when using master-slave pdns replication (in such cluster the [slaves](https://doc.powerdns.com/authoritative/modes-of-operation.html#master-slave-setup-requirements) should set this value to `slave`, while [superslaves](https://doc.powerdns.com/authoritative/modes-of-operation.html#supermaster-automatic-provisioning-of-slaves) will do it automatically when creating ingested zones).
 * `ns` value is a list of nameservers as in the example above.  Put nameservers on their own lines prefixed with a hyphen and indented accordingly.  There is not currently a limit for the number of nameservers you may use, 2-5 is typical and should be geographically distributed per RFC 2182.
 * `recursion` controls ALIAS records, which are CNAMEs on apex (RFC 1034). Enabling requires configuration of `resolver` and `expand-alias` in pdns.conf.
 

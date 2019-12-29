@@ -9,7 +9,6 @@
 
 	namespace Opcenter\Dns\Providers\Powerdns;
 
-
 	use GuzzleHttp\Exception\BadResponseException;
 	use GuzzleHttp\Exception\ClientException;
 	use GuzzleHttp\Exception\ServerException;
@@ -25,6 +24,11 @@
 		 * apex markers are marked with @
 		 */
 		protected const HAS_ORIGIN_MARKER = true;
+        protected static $permitted_types = [
+            'master',
+            'slave',
+            'native',
+        ];
 		protected static $permitted_records = [
 			'A',
 			'AAAA',
@@ -104,10 +108,17 @@
 			 */
 			try
 			{
+				$kind = 'native'; // Enables backend replication via MySQL Replication or MariaDB Galera replication
+
+				if (defined('AUTH_PDNS_TYPE') && in_array(AUTH_PDNS_TYPE, static::$permitted_types))
+				{
+					$kind = AUTH_PDNS_TYPE;
+				}
+
 				$nsNames = $this->get_hosting_nameservers($domain);
 				$api = $this->makeApi($domain);
 				$api->do('POST', 'servers/localhost/zones', [
-					'kind'        => 'native', // Enables backend replication via MySQL Replication or MariaDB Galera replication
+					'kind'        => $kind,
 					'name'        => $this->makeCanonical($domain),
 					'nameservers' => [], // Required to provision but allowed to be empty since we provide the NS rrsets
 					'rrsets'      => array_merge($this->createSOA($domain, $this->ns[0], 'hostmaster@' . $domain), $this->createNS($domain, $nsNames)),
