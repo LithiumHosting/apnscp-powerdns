@@ -24,11 +24,11 @@
 		 * apex markers are marked with @
 		 */
 		protected const HAS_ORIGIN_MARKER = true;
-        protected static $permitted_types = [
-            'master',
-            'slave',
-            'native',
-        ];
+		protected static $permitted_types = [
+			'master',
+			'slave',
+			'native',
+		];
 		protected static $permitted_records = [
 			'A',
 			'AAAA',
