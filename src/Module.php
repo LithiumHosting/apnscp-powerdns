@@ -9,22 +9,31 @@
 
 	namespace Opcenter\Dns\Providers\Powerdns;
 
-
 	use GuzzleHttp\Exception\BadResponseException;
 	use GuzzleHttp\Exception\ClientException;
 	use GuzzleHttp\Exception\ServerException;
 	use Module\Provider\Contracts\ProviderInterface;
 	use Opcenter\Dns\Record as RecordBase;
 
-	class Module extends \Dns_Module implements ProviderInterface {
+	class Module extends \Dns_Module implements ProviderInterface
+	{
 		use \NamespaceUtilitiesTrait;
 
 		const DNS_TTL = 14400;
+
+		const ZONE_TYPE = 'native'; // Enables backend replication via MySQL Replication or MariaDB Galera replication
 
 		/**
 		 * apex markers are marked with @
 		 */
 		protected const HAS_ORIGIN_MARKER = true;
+
+		protected static $permitted_zone_types = [
+			'master',
+			'slave',
+			'native',
+		];
+
 		protected static $permitted_records = [
 			'A',
 			'AAAA',
@@ -43,6 +52,7 @@
 			'TXT',
 			'URI',
 		];
+
 		protected $metaCache = [];
 
 		/**
@@ -55,12 +65,15 @@
 		public function __construct()
 		{
 			parent::__construct();
-			if (!$this->hasCnameApexRestriction()) {
+
+			if (!$this->hasCnameApexRestriction())
+			{
 				static::$permitted_records[] = 'ALIAS';
 			}
+
 			$this->ns      = defined('AUTH_PDNS_NS') ? AUTH_PDNS_NS : AUTH_PDNS; // Backwards compatible
 			$this->records = [];
-			$this->apis = [];
+			$this->apis    = [];
 		}
 
 		public function __sleep()
@@ -87,6 +100,25 @@
 			return $rec;
 		}
 
+		/**
+		 * Get zone replication type
+		 *
+		 * @return string
+		 */
+		protected function getZoneType(): string
+		{
+			if (!defined('AUTH_PDNS_TYPE'))
+			{
+				return static::ZONE_TYPE;
+			}
+
+			if (!in_array(AUTH_PDNS_TYPE, static::$permitted_zone_types, true))
+			{
+				fatal("Unknown PowerDNS server type '%s'", AUTH_PDNS_TYPE);
+			}
+
+			return AUTH_PDNS_TYPE;
+		}
 
 		/**
 		 * Add DNS zone to service
@@ -107,7 +139,7 @@
 				$nsNames = $this->get_hosting_nameservers($domain);
 				$api = $this->makeApi($domain);
 				$api->do('POST', 'servers/localhost/zones', [
-					'kind'        => 'native', // Enables backend replication via MySQL Replication or MariaDB Galera replication
+					'kind'        => $this->getZoneType(),
 					'name'        => $this->makeCanonical($domain),
 					'nameservers' => [], // Required to provision but allowed to be empty since we provide the NS rrsets
 					'rrsets'      => array_merge($this->createSOA($domain, $this->ns[0], 'hostmaster@' . $domain), $this->createNS($domain, $nsNames)),
