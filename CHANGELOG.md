@@ -29,9 +29,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 - Merged Pull Request to address various issues
 
-## [1.0.4] 2019-12-29
+## [1.0.4] 2019-12-31
 ### Added
-- Added domain type selection in src/Module.php
+- Added zone type selection in src/Module.php
 - Added extra config param and description in README.md
 ### Changed
 - Changed LICENSE year
