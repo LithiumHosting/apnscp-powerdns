@@ -10,7 +10,6 @@
 namespace Opcenter\Dns\Providers\Powerdns;
 
 
-use GuzzleHttp\Exception\BadResponseException;
 use GuzzleHttp\Exception\ServerException;
 use GuzzleHttp\Psr7\Request;
 use GuzzleHttp\Psr7\Response;
