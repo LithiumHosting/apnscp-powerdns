@@ -151,7 +151,7 @@
 			}
 			catch (ClientException $e)
 			{
-				return error("Failed to add zone '%s', error: %s", $domain, $this->renderMessage($e));
+				return error("Failed to add zone '%(zone)s', error: %(err)s", ['zone' => $domain, 'err' => $this->renderMessage($e)]);
 			}
 
 			return $api->getResponse()->getStatusCode() === 201; // Returns 201 Created on success.
@@ -293,7 +293,7 @@
 			}
 			catch (ClientException $e)
 			{
-				return error("Failed to remove zone '%s', error: %s", $domain, $this->renderMessage($e));
+				return error("Failed to remove zone '%(zone)s', error: %(err)s", ['zone' => $domain, 'err' => $this->renderMessage($e)]);
 			}
 
 			return $api->getResponse()->getStatusCode() === 204; // Returns 204 No Content on success.;
@@ -377,7 +377,9 @@
 			}
 			catch (ClientException $e)
 			{
-				return error("Failed to create record '%s': %s", (string) $record, $this->renderMessage($e));
+				return error("Failed to create record '%(record)s': %(err)s",
+					['record' => (string)$record, 'err' => $this->renderMessage($e)]
+				);
 			}
 
 			return $api->getResponse()->getStatusCode() === 204; // Returns 204 No Content on success.

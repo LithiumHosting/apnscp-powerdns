@@ -22,6 +22,7 @@ class Validator implements ServiceProvider {
 
     public static function keyValid(): bool
     {
+
         try
         {
             (new Api())->do('GET', 'statistics');
@@ -34,6 +35,14 @@ class Validator implements ServiceProvider {
 			}
 			switch ($response->getStatusCode())
 			{
+				case 301:
+				case 302:
+				case 303:
+				case 307:
+				case 308:
+					$location = array_get($response->getHeader('location'), 0, 'UNKNOWN');
+					$reason = "Redirection encountered to `${location}'";
+					break;
 				case 404:
 					$reason = 'Endpoint configuration is invalid';
 					break;

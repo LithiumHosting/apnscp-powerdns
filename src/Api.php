@@ -10,6 +10,9 @@
 namespace Opcenter\Dns\Providers\Powerdns;
 
 
+use GuzzleHttp\Exception\BadResponseException;
+use GuzzleHttp\Exception\ServerException;
+use GuzzleHttp\Psr7\Request;
 use GuzzleHttp\Psr7\Response;
 
 class Api {
@@ -45,6 +48,14 @@ class Api {
         $this->endpoint = AUTH_PDNS_URI;
         $this->client   = new \GuzzleHttp\Client([
             'base_uri' => rtrim($this->endpoint, '/') . '/',
+            // disallow misconfigured endpoints that redirect to SSL but are configured without
+            'allow_redirects' => [
+            'on_redirect' => function (Request $request, Response $response) {
+                $newLocation = array_get($response->getHeader('location'), 0, null);
+                throw new ServerException('Not following. 3xx status code encountered: ' . $newLocation,
+                    $request, $response);
+                }
+            ],
         ]);
         $this->lastModification = time();
         $this->deadline = defined('AUTH_PDNS_DEADLINE') ? (int)AUTH_PDNS_DEADLINE : 20;
