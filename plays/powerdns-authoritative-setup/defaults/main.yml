@@ -19,6 +19,10 @@ powerdns_local_dir: "/etc/pdns/local.d"
 powerdns_config_file: /etc/pdns/pdns.conf
 # PowerDNS database backend, mysql or pgsql
 powerdns_driver: mysql
+# Available PowerDNS drivers
+powerdns_available_drivers:
+  - mysql
+  - pgsql
 # Duration for Packet Cache
 # @XXX To avoid false positives, all participating nodes MUST have
 # pdns.deadline set to this value in auth.yml

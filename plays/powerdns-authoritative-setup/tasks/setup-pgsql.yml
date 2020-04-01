@@ -6,6 +6,8 @@
     password: "{{ __powerdns_db_password}}"
     state: present
     login_user: root
+    db: template1
+  no_log: True
   register: user_exists
   notify: Restart PowerDNS
 
@@ -13,7 +15,6 @@
   postgresql_db:
     name: "{{ powerdns_db_name}}"
     owner: "{{ powerdns_db_user }}"
-    template: template1
     state: present
     login_user: root
   register: db_exists

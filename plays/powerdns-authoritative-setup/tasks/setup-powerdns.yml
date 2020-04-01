@@ -26,6 +26,14 @@
   loop: "{{ powerdns_config | dict2items }}"
   notify: Restart PowerDNS
 
+- name: Remove conflicting module definitions
+  lineinfile:
+    path: "{{ powerdns_config_file }}"
+    regexp: '^\s*g{{ item }}-'
+    state: absent
+  when: item != powerdns_driver
+  with_items: "{{ powerdns_available_drivers }}"
+
 - name: Set PowerDNS driver credentials
   lineinfile:
     path: "{{ powerdns_config_file }}"
