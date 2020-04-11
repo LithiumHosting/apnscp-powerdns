@@ -302,7 +302,7 @@
 		/**
 		 * @inheritDoc
 		 */
-		public function record_exists(string $zone, string $subdomain, string $rr = 'ANY', string $parameter = null): bool
+		public function record_exists(string $zone, string $subdomain, string $rr = 'ANY', string $parameter = ''): bool
 		{
 			$api = $this->makeApi($zone);
 			if ($api->dirty()) {
@@ -556,16 +556,16 @@
 		}
 
 		/**
-		 * Remove a DNS record
+		 * @inheritDoc
 		 *
 		 * @param string      $zone
 		 * @param string      $subdomain
 		 * @param string      $rr
-		 * @param string|null $param
+		 * @param string      $param
 		 *
 		 * @return bool
 		 */
-		public function remove_record(string $zone, string $subdomain, string $rr, string $param = null): bool
+		public function remove_record(string $zone, string $subdomain, string $rr, string $param = ''): bool
 		{
 			if (null === $param) {
 				$param = '';
