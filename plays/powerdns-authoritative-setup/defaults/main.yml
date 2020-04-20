@@ -56,6 +56,7 @@ powerdns_skeleton:
       - 127.0.0.1
     deadline: "{{ powerdns_packet_cache_ttl }}"
     recursion: "{{ powerdns_enable_recursion }}"
+    soa: null
 powerdns_webserver_enable: "{{ powerdns_version is version('4.1', '>=') | ternary('no', 'yes') }}"
 powerdns_api_listen: "{{ powerdns_localonly | ternary('127.0.0.1', '0.0.0.0') }}"
 powerdns_api_whitelist: "{{ powerdns_localonly | ternary('127.0.0.1,::1', '0.0.0.0,::/0') }}"

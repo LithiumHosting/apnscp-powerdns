@@ -142,7 +142,7 @@
 					'kind'        => $this->getZoneType(),
 					'name'        => $this->makeCanonical($domain),
 					'nameservers' => [], // Required to provision but allowed to be empty since we provide the NS rrsets
-					'rrsets'      => array_merge($this->createSOA($domain, $this->ns[0], 'hostmaster@' . $domain), $this->createNS($domain, $nsNames)),
+					'rrsets'      => array_merge($this->createSOA($domain, $this->ns[0], $this->getSOAContact($domain)), $this->createNS($domain, $nsNames)),
 				]);
 			}
 			catch (ServerException $e)
@@ -155,6 +155,25 @@
 			}
 
 			return $api->getResponse()->getStatusCode() === 201; // Returns 201 Created on success.
+		}
+
+		/**
+		 * Get SOA authority for a given domain
+		 *
+		 * This may be overriden via auth.yml
+		 *
+		 * @param string $domain
+		 * @return string
+		 */
+		protected function getSOAContact(string $domain): string
+		{
+			if (defined('AUTH_PDNS_SOA') && !empty(AUTH_PDNS_SOA)) {
+				return \ArgumentFormatter::format(AUTH_PDNS_SOA, [
+					'domain' => $domain,
+				]);
+			}
+
+			return 'hostmaster@' . $domain;
 		}
 
 		/**
