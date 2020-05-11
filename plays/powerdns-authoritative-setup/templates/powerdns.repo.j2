@@ -3,7 +3,7 @@ name=PowerDNS repository for PowerDNS - version {{ powerdns_version }}.X
 baseurl=http://repo.powerdns.com/centos/$basearch/$releasever/auth-{{ powerdns_version | regex_replace('\.', '')}}
 gpgkey=https://repo.powerdns.com/FD380FBB-pub.asc
 gpgcheck=1
-enabled=1
+enabled="{{ (ansible_distribution_major_version == '8' and powerdns_driver == 'mysql') | ternary('0', '1') }}"
 priority=90
 includepkg=pdns*
 

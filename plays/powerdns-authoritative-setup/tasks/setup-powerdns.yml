@@ -3,12 +3,14 @@
   template:
     src: templates/powerdns.repo.j2
     dest: "{{ powerdns_repo_config }}"
+    force: false
 
 - name: Install PowerDNS RPMs
   yum:
     name: "{{ powerdns_packages }}"
     state: present
     lock_timeout: 300
+    disablerepo: "{{ (ansible_distribution_major_version == '8' and powerdns_driver == 'mysql') | ternary('pdns*', omit) }}"
 
 - name: Merge custom config
   include_role: name=common tasks_from="implicitly-import-overrides.yml"
@@ -47,8 +49,8 @@
     path: "{{ powerdns_local_dir }}"
     state: "{{ powerdns_enabled | ternary('directory', 'absent') }}"
     owner: "root"
-    group: "root"
-    mode: 0700
+    group: "pdns"
+    mode: 0750
 
 - name: Setup database
   include_tasks: "setup-{{ powerdns_driver }}.yml"
@@ -58,3 +60,7 @@
     name: pdns
     state: started
     enabled: yes
+- name: Record PowerDNS version
+  include_role: name=common tasks_from=record-runtime-setting.yml
+  vars:
+    setting: powerdns_version
