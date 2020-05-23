@@ -51,7 +51,6 @@
 
 		protected function formatSpf() {
 			$this->parameter = trim($this->parameter, '"');
-			$this->appendDot();
 			$this->parameter = '"' . $this->parameter .'"';
 		}
 
