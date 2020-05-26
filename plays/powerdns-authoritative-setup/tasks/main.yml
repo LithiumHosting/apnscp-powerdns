@@ -16,7 +16,6 @@
   include_tasks: setup-powerdns.yml
   when:
     - powerdns_enabled | bool
-    - not (powerdns_apionly | bool)
 
 - name: "{{ powerdns_enabled | ternary('Enable', 'Disable') }} firewall ports"
   include_role: name=network/setup-firewall tasks_from=add-firewall.yml
@@ -34,7 +33,7 @@
     name: "{{ powerdns_packages }}"
     state: absent
     lock_timeout: 300
-  when: powerdns_apionly or not (powerdns_enabled | bool)
+  when: not powerdns_enabled | bool
 
 - name: Extract pdns configuration from auth.yml
   include_vars:

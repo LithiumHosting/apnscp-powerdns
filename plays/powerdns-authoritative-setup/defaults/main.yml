@@ -3,17 +3,24 @@
 # This can be put behind an Apache proxy or other means
 # See documentation for examples
 powerdns_localonly: true
+
 # Toggle installation of PowerDNS
 powerdns_enabled: true
-# Use only the module API, PowerDNS is remotely hosted
-# powerdns_enabled must be true as well
-powerdns_apionly: false
+
 powerdns_version: 4.3
 powerdns_repo_uri: "https://repo.powerdns.com/repo-files/centos-rec-{{ powerdns_version | regex_replace('\\.','') }}.repo"
 powerdns_repo_config: /etc/yum.repos.d/powerdns.repo
 powerdns_packages:
   - pdns
   - "pdns-backend-{{ (powerdns_driver == 'pgsql') | ternary('postgresql', powerdns_driver) }}"
+# IP address for DNS resolver to listen. On 4.3 this is both IPv6 + IPv4. Prior only IPv4 is accepted
+# With CentOS 8+ 127.0.0.53 is excluded and all other IPs listed
+powerdns_dns_bind_address: >-
+  {%- if ansible_distribution_major_version != '7' -%}
+    {{ powerdns_version is version ('4.3', '>=') | ternary((([ansible_default_ipv4.address | default(None)]) + [ansible_default_ipv6.address | default(None)]) | reject('sameas', None) | reject('search', '127.0.0.53') | join(','), '0.0.0.0') }}
+  {%- else -%}
+    {{ powerdns_version is version ('4.3', '>=') | ternary('0.0.0.0, ::', '0.0.0.0') }}
+  {%- endif -%}
 
 powerdns_local_dir: "/etc/pdns/local.d"
 powerdns_config_file: /etc/pdns/pdns.conf
@@ -32,10 +39,6 @@ powerdns_packet_cache_ttl: 20
 powerdns_enable_recursion: false
 powerdns_recursive_ns: "{{ dns_robust_nameservers }}"
 powerdns_api_port: 8081
-
-# Code installation
-addin_provider_name: Powerdns
-addin_integration_type: "{{ (apnscp_debug | bool) | ternary('link', 'copy') }}"
 
 powerdns_db_password: >-
   {{ lookup('pipe', 'grep -e "^\s*g' + powerdns_driver + '-password\s*=" ' + (powerdns_config_file | quote) + ' | cut -d= -f2') | default(lookup('password', '/dev/null chars=ascii_letters length=24'), true) | trim }}
@@ -61,6 +64,7 @@ powerdns_webserver_enable: "{{ powerdns_version is version('4.1', '>=') | ternar
 powerdns_api_listen: "{{ powerdns_localonly | ternary('127.0.0.1', '0.0.0.0') }}"
 powerdns_api_whitelist: "{{ powerdns_localonly | ternary('127.0.0.1,::1', '0.0.0.0,::/0') }}"
 
+# INTERNAL Overide with powerdns_custom_config map
 powerdns_config:
   api: yes
   "api-key": "{{ __powerdns_api_key }}"
@@ -72,6 +76,7 @@ powerdns_config:
   "webserver-allow-from": "{{ powerdns_api_whitelist}}"
   "webserver-port": "{{ powerdns_api_port }}"
   launch: "g{{ powerdns_driver }}"
+  local-address: "{{ powerdns_dns_bind_address }}"
   version-string: anonymous
   expand-alias: "{{ powerdns_enable_recursion | ternary('yes', 'no') }}"
   resolver: "{{ powerdns_enable_recursion | ternary(powerdns_recursive_ns | map('regex_replace', '^([^:]+)$', '\\1:53') | list | join(','), 'no') }}"
@@ -88,3 +93,15 @@ powerdns_driver_config:
 # powerdns_custom_config:
 #   "allow-axfr-ips": 1.2.3.4
 #   "also-notify": 2.3.4.5
+
+###
+# INTERNAL TO BE REMOVED IN 3.2
+# PowerDNS is integrated into ApisCP as of v3.1 and this feature has no use
+# Use only the module API, PowerDNS is remotely hosted
+# powerdns_enabled must be true as well
+powerdns_apionly: false
+
+# INTERNAL Code installation
+addin_provider_name: Powerdns
+# INTERNAL Code installation
+addin_integration_type: "{{ (apnscp_debug | bool) | ternary('link', 'copy') }}"
