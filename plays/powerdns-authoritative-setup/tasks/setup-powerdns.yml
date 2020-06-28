@@ -25,6 +25,8 @@
     path: "{{ powerdns_config_file }}"
     regexp: '^\s*{{ item.key | regex_escape() }}\s*='
     line: '{{ item.key | string }}={{ item.value }}'
+    group: "{{ powerdns_owner }}"
+    mode: 0640
   loop: "{{ powerdns_config | dict2items }}"
   notify: Restart PowerDNS
 
@@ -49,7 +51,7 @@
     path: "{{ powerdns_local_dir }}"
     state: "{{ powerdns_enabled | ternary('directory', 'absent') }}"
     owner: "root"
-    group: "pdns"
+    group: "{{ powerdns_owner }}"
     mode: 0750
 
 - name: Setup database

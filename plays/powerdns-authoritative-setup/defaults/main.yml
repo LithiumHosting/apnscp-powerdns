@@ -24,6 +24,7 @@ powerdns_dns_bind_address: >-
 
 powerdns_local_dir: "/etc/pdns/local.d"
 powerdns_config_file: /etc/pdns/pdns.conf
+powerdns_owner: pdns
 # PowerDNS database backend, mysql or pgsql
 powerdns_driver: mysql
 # Available PowerDNS drivers
@@ -34,7 +35,6 @@ powerdns_available_drivers:
 # @XXX To avoid false positives, all participating nodes MUST have
 # pdns.deadline set to this value in auth.yml
 powerdns_packet_cache_ttl: 20
-
 # required for ALIAS flattening
 powerdns_enable_recursion: false
 powerdns_recursive_ns: "{{ dns_robust_nameservers }}"
