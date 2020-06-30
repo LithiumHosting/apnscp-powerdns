@@ -50,8 +50,9 @@
     dest: "{{ apnscp_root }}/config/auth.yaml"
   notify: Restart apnscp
 
+  # Unconditionally link in module library
 - name: Install provider module
-  include_role: name=common/addin tasks_from="{{ powerdns_enabled | ternary('install', 'remove') }}-library.yml"
+  include_role: name=common/addin tasks_from="install-library.yml"
   vars:
     name: "{{ addin_provider_name }}"
     type: "dns"
