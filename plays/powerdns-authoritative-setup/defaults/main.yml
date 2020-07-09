@@ -5,7 +5,7 @@
 powerdns_localonly: true
 
 # Toggle installation of PowerDNS
-powerdns_enabled: true
+powerdns_enabled: false
 
 powerdns_version: 4.3
 powerdns_repo_uri: "https://repo.powerdns.com/repo-files/centos-rec-{{ powerdns_version | regex_replace('\\.','') }}.repo"
