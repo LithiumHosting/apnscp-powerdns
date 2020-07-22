@@ -45,7 +45,7 @@
 
 		protected function formatMx()
 		{
-			$this->parameter = str_replace("\t", " ", $this->parameter);
+			$this->parameter = str_replace("\t", ' ', $this->parameter);
 			return $this->appendDot();
 		}
 

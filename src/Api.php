@@ -49,7 +49,7 @@ class Api {
             'base_uri' => rtrim($this->endpoint, '/') . '/',
             // disallow misconfigured endpoints that redirect to SSL but are configured without
             'allow_redirects' => [
-            'on_redirect' => function (Request $request, Response $response) {
+            'on_redirect' => static function (Request $request, Response $response) {
                 $newLocation = array_get($response->getHeader('location'), 0, null);
                 throw new ServerException('Not following. 3xx status code encountered: ' . $newLocation,
                     $request, $response);
@@ -57,7 +57,7 @@ class Api {
             ],
         ]);
         $this->lastModification = time();
-        $this->deadline = defined('AUTH_PDNS_DEADLINE') ? (int)AUTH_PDNS_DEADLINE : 20;
+        $this->deadline = \defined('AUTH_PDNS_DEADLINE') ? (int)AUTH_PDNS_DEADLINE : 20;
     }
 
     public function do(string $method, string $endpoint, array $params = null): array
@@ -87,7 +87,7 @@ class Api {
         }
         $this->lastResponse = $this->client->request($method, $endpoint, [
             'headers' => [
-                'User-Agent' => PANEL_BRAND . " " . APNSCP_VERSION,
+                'User-Agent' => PANEL_BRAND . ' ' . APNSCP_VERSION,
                 'Accept'     => 'application/json',
                 'X-API-Key'  => $this->key,
             ],

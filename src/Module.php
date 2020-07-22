@@ -71,7 +71,7 @@
 				static::$permitted_records[] = 'ALIAS';
 			}
 
-			$this->ns      = defined('AUTH_PDNS_NS') ? AUTH_PDNS_NS : AUTH_PDNS; // Backwards compatible
+			$this->ns      = \defined('AUTH_PDNS_NS') ? AUTH_PDNS_NS : AUTH_PDNS; // Backwards compatible
 			$this->records = [];
 			$this->apis    = [];
 		}
@@ -107,12 +107,12 @@
 		 */
 		protected function getZoneType(): string
 		{
-			if (!defined('AUTH_PDNS_TYPE'))
+			if (!\defined('AUTH_PDNS_TYPE'))
 			{
 				return static::ZONE_TYPE;
 			}
 
-			if (!in_array(AUTH_PDNS_TYPE, static::$permitted_zone_types, true))
+			if (!\in_array(AUTH_PDNS_TYPE, static::$permitted_zone_types, true))
 			{
 				fatal("Unknown PowerDNS server type '%s'", AUTH_PDNS_TYPE);
 			}
@@ -167,7 +167,7 @@
 		 */
 		protected function getSOAContact(string $domain): string
 		{
-			if (defined('AUTH_PDNS_SOA') && !empty(AUTH_PDNS_SOA)) {
+			if (\defined('AUTH_PDNS_SOA') && !empty(AUTH_PDNS_SOA)) {
 				return \ArgumentFormatter::format(AUTH_PDNS_SOA, [
 					'domain' => $domain,
 				]);
@@ -284,7 +284,7 @@
 		private function renderMessage(BadResponseException $e): string
 		{
 
-			$body = (array)\Error_Reporter::silence(function () use ($e) {
+			$body = (array)\Error_Reporter::silence(static function () use ($e) {
 				return \json_decode($e->getResponse()->getBody()->getContents(), true);
 			});
 
@@ -688,7 +688,7 @@
 			catch (ClientException $e)
 			{
 				// ignore zone does not exist
-				warn("Failed to transfer DNS records from PowerDNS - try again later. Response code: %d", $e->getResponse()->getStatusCode());
+				warn('Failed to transfer DNS records from PowerDNS - try again later. Response code: %d', $e->getResponse()->getStatusCode());
 				return null;
 			}
 			return $axfrrec['zone'];
@@ -840,7 +840,7 @@
 		protected function hasCnameApexRestriction(): bool
 		{
 			// ALIAS record mitigates this
-			if (!defined('AUTH_DNS_RECURSION')) {
+			if (!\defined('AUTH_DNS_RECURSION')) {
 				return true;
 			}
 			return !AUTH_PDNS_RECURSION;
