@@ -678,7 +678,7 @@
 		 * @return null|string
 		 */
 
-		protected function zoneAxfr($domain): ?string
+		protected function zoneAxfr(string $domain): ?string
 		{
 			try
 			{
