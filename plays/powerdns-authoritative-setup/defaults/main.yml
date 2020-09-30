@@ -21,7 +21,9 @@ powerdns_dns_bind_address: >-
   {%- else -%}
     {{ powerdns_version is version ('4.3', '>=') | ternary('0.0.0.0, ::', '0.0.0.0') }}
   {%- endif -%}
-
+# Default PowerDNS zone type, can be type "native" for database clustering or "master", "slave" for AXFR types
+# AXFR/NOTIFY cannot remove zones
+powerdns_zone_type: "{{ (lookup('file', apnscp_root + '/config/auth.yaml' ) | from_yaml)['pdns']['type'] | default('native') }}"
 powerdns_local_dir: "/etc/pdns/local.d"
 powerdns_config_file: /etc/pdns/pdns.conf
 powerdns_owner: pdns
@@ -53,6 +55,7 @@ powerdns_api_key: >-
 # Default configuration in auth.yml if not set
 powerdns_skeleton:
   pdns:
+    type: "{{ powerdns_zone_type }}"
     uri: "http://localhost:{{ powerdns_api_port }}/api/v1"
     key: "{{ __powerdns_api_key }}"
     ns:
