@@ -87,6 +87,12 @@ powerdns_config:
   expand-alias: "{{ powerdns_enable_recursion | ternary('yes', 'no') }}"
   resolver: "{{ powerdns_enable_recursion | ternary(powerdns_recursive_ns | map('regex_replace', '^([^:]+)$', '\\1:53') | list | join(','), 'no') }}"
 
+# Set ip + name fields to configure a supermaster automatically.
+# Setting a supermaster requires powerdns_zone_type as "slave"
+powerdns_supermaster:
+  ip: null
+  name: null
+  account: master
 # Variety of issues with template keys and unsafe text from lookups. Break this into a separate setting
 # to compose the key as g<driver>-<key>
 powerdns_driver_config:
