@@ -1,0 +1,40 @@
+---
+- name: Assert zone type is slave
+  assert:
+    that: powerdns_zone_type == 'slave'
+- name: Assert supermaster properly configured
+  assert:
+    that: >-
+      'ip' in powerdns_supermaster and
+      powerdns_supermaster.ip != None and
+      'nameserver' in powerdns_supermaster and
+      powerdns_supermaster.nameserver != None
+- name: Set supermaster query - MySQL
+  shell: >-
+    echo 'INSERT INTO supermasters
+        (ip, nameserver{% if powerdns_version is version('4.3', '>=') %}, account {% endif %}) VALUES
+        (
+          '\''{{ powerdns_supermaster['ip'] }}'\'',
+          '\''{{ powerdns_supermaster['nameserver'] }}'\''
+          {% if powerdns_version is version('4.3', '>=') %}, '\''{{ powerdns_supermaster['account'] }}'\'' {% endif %}
+        )' | mysql {{ powerdns_db_name | quote }}
+  when: powerdns_driver == 'mysql'
+  register: r
+  changed_when: r.rc == 0
+  failed_when: false
+  notify: Restart PowerDNS
+- name: Set supermaster query - PostgreSQL
+  postgresql_query:
+    db: "{{ powerdns_db_name }}"
+    login_host: "{{ powerdns_db_host }}"
+    login_user: "{{ powerdns_db_user }}"
+    login_password: "{{ powerdns_db_password }}"
+    query: >-
+      INSERT INTO supermasters
+        (ip, nameserver{% if powerdns_version is version('4.3', '>=') %}, account {% endif %}) VALUES
+        (
+          %(ip)s, %(nameserver)s {% if powerdns_version is version('4.3', '>=') %}, %(account)s{% endif %}
+        ) ON CONFLICT (ip,nameserver) DO NOTHING
+    named_args: "{{ powerdns_supermaster }}"
+  when: powerdns_driver == 'pgsql'
+  notify: Restart PowerDNS

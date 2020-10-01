@@ -95,7 +95,7 @@ On the slave, *assuming the master is 1.2.3.3 with the hostname master.domain.co
 cpcmd scope:set cp.bootstrapper powerdns_zone_type slave
 cpcmd scope:set cp.bootstrapper powerdns_custom_config '["allow-notify-from":"1.2.3.3","slave":"yes"]'
 cpcmd scope:set cp.bootstrapper powerdns_nameservers '[ns1.domain.com,ns2.domain.com]'
-cpcmd scope:set cp.bootstrapper powerdns_supermaster '[ip:1.2.3.4,name:master.domain.com,account:master]'
+cpcmd scope:set cp.bootstrapper powerdns_supermaster '[ip:1.2.3.4,nameserver:master.domain.com,account:master]'
 env BSARGS="--extra-vars=force=yes" upcp -sb software/powerdns
 ```
 

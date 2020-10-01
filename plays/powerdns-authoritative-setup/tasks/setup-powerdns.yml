@@ -56,7 +56,9 @@
 
 - name: Setup database
   include_tasks: "setup-{{ powerdns_driver }}.yml"
-
+- name: Populate supermaster configuration
+  include_tasks: "setup-slave.yml"
+  when: '"ip" in powerdns_supermaster and powerdns_supermaster.ip != None'
 - name: Enable PowerDNS
   systemd:
     name: pdns

@@ -91,7 +91,7 @@ powerdns_config:
 # Setting a supermaster requires powerdns_zone_type as "slave"
 powerdns_supermaster:
   ip: null
-  name: null
+  nameserver: null
   account: master
 # Variety of issues with template keys and unsafe text from lookups. Break this into a separate setting
 # to compose the key as g<driver>-<key>
