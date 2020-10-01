@@ -41,7 +41,9 @@ powerdns_packet_cache_ttl: 20
 powerdns_enable_recursion: false
 powerdns_recursive_ns: "{{ dns_robust_nameservers }}"
 powerdns_api_port: 8081
-
+# Change to match your public nameservers
+powerdns_nameservers:
+  - 127.0.0.1
 powerdns_db_password: >-
   {{ lookup('pipe', 'grep -e "^\s*g' + powerdns_driver + '-password\s*=" ' + (powerdns_config_file | quote) + ' | cut -d= -f2') | default(lookup('password', '/dev/null chars=ascii_letters length=24'), true) | trim }}
 powerdns_db_user: >-
@@ -58,8 +60,7 @@ powerdns_skeleton:
     type: "{{ powerdns_zone_type }}"
     uri: "http://localhost:{{ powerdns_api_port }}/api/v1"
     key: "{{ __powerdns_api_key }}"
-    ns:
-      - 127.0.0.1
+    ns: "{{ powerdns_nameservers }}"
     deadline: "{{ powerdns_packet_cache_ttl }}"
     recursion: "{{ powerdns_enable_recursion }}"
     soa: null

@@ -27,7 +27,7 @@
     line: '{{ item.key | string }}={{ item.value }}'
     group: "{{ powerdns_owner }}"
     mode: 0640
-  loop: "{{ powerdns_config | dict2items }}"
+  loop: "{{ __config | dict2items }}"
   notify: Restart PowerDNS
 
 - name: Remove conflicting module definitions
