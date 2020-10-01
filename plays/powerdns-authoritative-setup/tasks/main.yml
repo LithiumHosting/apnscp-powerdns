@@ -42,12 +42,18 @@
 
 - name: Update api-key as needed
   set_fact:
-    __authcfg: "{{ __authcfg |combine({'pdns': {'key': __powerdns_api_key}})}}"
+    __authcfg: "{{ __authcfg |combine({'pdns': {'key': __powerdns_api_key}}, recursive=True)}}"
   when: -1 != __authcfg.get('pdns', {}).get('uri', "").find("/localhost:")
 
 - name: Combine pdns configuration
   set_fact:
     __powerdns_skeleton: "{{ powerdns_skeleton | combine(__authcfg | default({}), recursive=True) }}"
+  when: not force | default(false)
+
+- name: Combine pdns configuration - forced overwrite
+  set_fact:
+    __powerdns_skeleton: "{{ __authcfg | default({}) | combine(powerdns_skeleton, recursive=True) }}"
+  when: force | default(false)
 
 - name: Update auth.yaml configuration
   copy:
