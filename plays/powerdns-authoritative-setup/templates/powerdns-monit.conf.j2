@@ -1,4 +1,4 @@
 CHECK PROCESS pdns-auth MATCHING '/pdns_server\b'
-   start program = "/bin/systemctl pdns start"
-   stop program = "/bin/systemctl pdns stop"
+   start program = "/bin/systemctl start pdns"
+   stop program = "/bin/systemctl stop pdns"
    if failed host {{ powerdns_dns_bind_address.split(",")[0] }} port 53 type udp protocol dns for 2 cycles then restart
