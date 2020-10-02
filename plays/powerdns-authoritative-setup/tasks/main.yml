@@ -17,6 +17,18 @@
   when:
     - powerdns_enabled | bool
 
+- name: Add Argos profile
+  template:
+    src: templates/powerdns-monit.conf.j2
+    dest: /etc/monit.d/pdns-auth.conf
+  notify: Restart monit
+
+- name: Manage Argos profile
+  include_role: name=software/argos tasks_from=toggle-service.yml
+  vars:
+    name: pdns-auth
+    state: "{{ powerdns_enabled | ternary('enabled', 'disabled') }}"
+
 - name: "{{ powerdns_enabled | ternary('Enable', 'Disable') }} firewall ports"
   include_role: name=network/setup-firewall tasks_from=add-firewall.yml
   vars:

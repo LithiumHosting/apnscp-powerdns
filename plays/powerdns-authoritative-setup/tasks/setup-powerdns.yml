@@ -59,11 +59,13 @@
 - name: Populate supermaster configuration
   include_tasks: "setup-slave.yml"
   when: '"ip" in powerdns_supermaster and powerdns_supermaster.ip != None'
+
 - name: Enable PowerDNS
   systemd:
     name: pdns
     state: started
     enabled: yes
+
 - name: Record PowerDNS version
   include_role: name=common tasks_from=record-runtime-setting.yml
   vars:
