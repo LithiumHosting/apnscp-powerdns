@@ -22,6 +22,7 @@
     src: templates/powerdns-monit.conf.j2
     dest: /etc/monit.d/pdns-auth.conf
   notify: Restart monit
+  when: powerdns_enabled
 
 - name: Manage Argos profile
   include_role: name=software/argos tasks_from=toggle-service.yml
@@ -55,7 +56,10 @@
 - name: Update api-key as needed
   set_fact:
     __authcfg: "{{ __authcfg |combine({'pdns': {'key': __powerdns_api_key}}, recursive=True)}}"
-  when: -1 != __authcfg.get('pdns', {}).get('uri', "").find("/localhost:")
+  when:
+    - -1 != __authcfg.get('pdns', {}).get('uri', "").find("/localhost:")
+    # Disable /etc/pdns/ check if disabled
+    - powerdns_enabled
 
 - name: Combine pdns configuration
   set_fact:

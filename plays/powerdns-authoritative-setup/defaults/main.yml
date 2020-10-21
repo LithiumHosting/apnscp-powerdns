@@ -47,7 +47,7 @@ powerdns_nameservers:
 # API URI endpoint, defaults to local
 powerdns_api_uri: "http://localhost:{{ powerdns_api_port }}/api/v1"
 powerdns_db_password: >-
-  {{ lookup('pipe', 'grep -e "^\s*g' + powerdns_driver + '-password\s*=" ' + (powerdns_config_file | quote) + ' | cut -d= -f2') | default(lookup('password', '/dev/null chars=ascii_letters length=24'), true) | trim }}
+  {{ lookup('pipe', 'grep -se "^\s*g' + powerdns_driver + '-password\s*=" ' + (powerdns_config_file | quote) + ' | cut -d= -f2') | default(lookup('password', '/dev/null chars=ascii_letters length=24'), true) | trim }}
 powerdns_db_user: >-
   {{ lookup('pipe', 'grep -e "^\s*g' + powerdns_driver + '-user\s*=" ' + (powerdns_config_file | quote) + ' | cut -d= -f2') | default('powerdns', true) | trim }}
 powerdns_db_name: >-
@@ -55,7 +55,7 @@ powerdns_db_name: >-
 powerdns_db_host: >-
   {{ lookup('pipe', 'grep -e "^\s*g' + powerdns_driver + '-host\s*=" ' + (powerdns_config_file | quote) + ' | cut -d= -f2') | default('localhost', true) | trim }}
 powerdns_api_key: >-
-  {{ lookup('pipe', 'grep -e "^\s*api-key\s*=" ' + (powerdns_config_file | quote) + ' | cut -d= -f2') | default(lookup('password', '/dev/null chars=ascii_letters length=24'), true) | trim }}
+  {{ lookup('pipe', 'grep -se "^\s*api-key\s*=" ' + (powerdns_config_file | quote) + ' | cut -d= -f2') | default(lookup('password', '/dev/null chars=ascii_letters length=24'), true) | trim }}
 # Default configuration in auth.yml if not set
 powerdns_skeleton:
   pdns:
