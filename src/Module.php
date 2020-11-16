@@ -690,6 +690,9 @@
 				// ignore zone does not exist
 				warn('Failed to transfer DNS records from PowerDNS - try again later. Response code: %d', $e->getResponse()->getStatusCode());
 				return null;
+			} catch (ServerException $e) {
+				error('Failed to transfer DNS records from PowerDNS. PowerDNS server reported internal error. Response code: %d', $e->getResponse()->getStatusCode());
+				return null;
 			}
 			return $axfrrec['zone'];
 		}
@@ -844,5 +847,25 @@
 				return true;
 			}
 			return !AUTH_PDNS_RECURSION;
+		}
+
+		/**
+		 * @inheritDoc
+		 *
+		 * @return array
+		 */
+		public function get_all_domains(): array
+		{
+			try {
+				$api = $this->makeApi('_ADMIN');
+				// Get zone and rrsets, need to parse the existing rrsets to ensure proper addition of new records
+				$zoneData = $api->do('GET', 'servers/localhost/zones');
+				return array_column($zoneData, 'name');
+			} catch (ClientException $e) {
+				error("Failed to transfer domains: %s", $e->getMessage());
+				return [];
+			}
+
+			return [];
 		}
 	}
