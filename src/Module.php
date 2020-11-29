@@ -860,7 +860,9 @@
 				$api = $this->makeApi('_ADMIN');
 				// Get zone and rrsets, need to parse the existing rrsets to ensure proper addition of new records
 				$zoneData = $api->do('GET', 'servers/localhost/zones');
-				return array_column($zoneData, 'name');
+				return array_map(static function ($domain) {
+					return rtrim($domain, '.');
+				}, array_column($zoneData, 'name'));
 			} catch (ClientException $e) {
 				error("Failed to transfer domains: %s", $e->getMessage());
 				return [];
