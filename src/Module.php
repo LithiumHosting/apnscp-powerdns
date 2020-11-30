@@ -45,6 +45,7 @@
 			'MX',
 			'NAPTR',
 			'NS',
+			'PTR',
 			//'SMIMEA',
 			'SPF',
 			'SRV',
