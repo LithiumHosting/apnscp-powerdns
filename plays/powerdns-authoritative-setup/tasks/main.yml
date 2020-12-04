@@ -40,6 +40,7 @@
     permanent: yes
   with_items:
     - service: dns
+  when: powerdns_managed_firewall
 
 - name: Remove PowerDNS RPMs
   yum:
