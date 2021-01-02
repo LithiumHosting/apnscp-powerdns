@@ -10,7 +10,6 @@
     name: "{{ powerdns_packages }}"
     state: present
     lock_timeout: 300
-    disablerepo: "{{ (ansible_distribution_major_version == '8' and powerdns_driver == 'mysql') | ternary('pdns*', omit) }}"
 
 - name: Merge custom config
   include_role: name=common tasks_from="implicitly-import-overrides.yml"
