@@ -17,7 +17,7 @@ powerdns_packages:
 # With CentOS 8+ 127.0.0.53 is excluded and all other IPs listed
 powerdns_dns_bind_address: >-
   {%- if ansible_distribution_major_version != '7' -%}
-    {{ powerdns_version is version ('4.3', '>=') | ternary((([ansible_default_ipv4.address | default(None)]) + [ansible_default_ipv6.address | default(None)]) | reject('sameas', None) | reject('search', '127.0.0.53') | join(','), '0.0.0.0') }}
+    {{ powerdns_version is version ('4.3', '>=') | ternary((([ansible_default_ipv4.address | default(None)]) + [ansible_default_ipv6.address | default(None)] + ['127.0.0.1']) | reject('sameas', None) | reject('search', '127.0.0.53') | join(','), '0.0.0.0') }}
   {%- else -%}
     {{ powerdns_version is version ('4.3', '>=') | ternary('0.0.0.0, ::', '0.0.0.0') }}
   {%- endif -%}
