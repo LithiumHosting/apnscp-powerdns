@@ -20,8 +20,6 @@
 	{
 		use \NamespaceUtilitiesTrait;
 
-		const DNS_TTL = 14400;
-
 		const ZONE_TYPE = 'native'; // Enables backend replication via MySQL Replication or MariaDB Galera replication
 
 		/**
