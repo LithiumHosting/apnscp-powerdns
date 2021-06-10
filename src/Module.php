@@ -45,6 +45,7 @@
 			'NAPTR',
 			'NS',
 			'PTR',
+			'SOA',
 			//'SMIMEA',
 			'SPF',
 			'SRV',
@@ -407,6 +408,11 @@
 				'parameter' => $param,
 				'ttl'       => $ttl,
 			]);
+
+			if ($record['rr'] === 'SOA') {
+				return error("Cannot add/remove SOA record directly");
+			}
+
 			try {
 				$api = $this->makeApi($zone);
 				// Get zone and rrsets, need to parse the existing rrsets to ensure proper addition of new records
@@ -593,6 +599,10 @@
 				'parameter' => $param,
 			]);
 
+			if ($record['rr'] === 'SOA') {
+				return error("Cannot add/remove SOA record directly");
+			}
+
 			try {
 				$api = $this->makeApi($zone);
 				// Get zone and rrsets, need to parse the existing rrsets to ensure proper addition of new records
@@ -684,6 +694,30 @@
 			return [];
 		}
 
+		protected function canonicalizeRecord(
+			string &$zone,
+			string &$subdomain,
+			string &$rr,
+			string &$param,
+			int &$ttl = null
+		): bool {
+			if (!parent::canonicalizeRecord($zone, $subdomain, $rr, $param,
+				$ttl))
+			{
+				return false;
+			}
+			if ($rr === 'SOA' && $param) {
+				$parts = preg_split('/\s+/', $param);
+				for ($i = 0; $i < 2; $i++) {
+					$parts[$i] = rtrim($parts[$i], '.') . '.';
+				}
+				$param = implode(' ', $parts);
+			}
+
+			return true;
+		}
+
+
 		/**
 		 * Get raw zone data
 		 *
@@ -735,6 +769,10 @@
 
 			if (!$this->canonicalizeRecord($zone, $new['name'], $new['rr'], $new['parameter'], $new['ttl'])) {
 				return false;
+			}
+
+			if (!($this->permission_level & PRIVILEGE_ADMIN) && ($old['rr'] === 'SOA' || $new['rr'] === 'SOA')) {
+				return error("Cannot edit SOA record as non-admin");
 			}
 
 			try {
