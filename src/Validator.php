@@ -52,7 +52,11 @@ class Validator implements ServiceProvider {
 				default:
 					$reason = $response->getReasonPhrase();
 			}
-			return error('PowerDNS key check failed: %s', $reason);
+
+			return error('%(provider)s key validation failed: %(reason)s', [
+				'provider' => 'PowerDNS',
+				'reason'   => $reason
+			]);
         }
 
         return true;
