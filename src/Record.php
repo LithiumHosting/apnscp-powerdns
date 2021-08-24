@@ -46,17 +46,34 @@
 		protected function formatMx()
 		{
 			$this->parameter = str_replace("\t", ' ', $this->parameter);
+
 			return $this->appendDot();
 		}
 
-		protected function formatSpf() {
+		protected function formatSpf()
+		{
 			$this->parameter = trim($this->parameter, '"');
-			$this->parameter = '"' . $this->parameter .'"';
+			$this->parameter = '"' . $this->parameter . '"';
 		}
 
 		protected function formatSrv()
 		{
 			return $this->appendDot();
+		}
+
+		protected function formatSoa()
+		{
+			$this->parameter = implode(' ',
+				[
+					rtrim($this->getMeta('mname'), '.') . '.',
+					rtrim($this->getMeta('rname'), '.') . '.',
+					$this->getMeta('serial'),
+					$this->getMeta('refresh'),
+					$this->getMeta('retry'),
+					$this->getMeta('expire'),
+					$this->getMeta('ttl'),
+				]
+			);
 		}
 
 		protected function formatTxt() {
