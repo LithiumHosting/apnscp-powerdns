@@ -46,7 +46,7 @@
 			'NS',
 			'PTR',
 			'SOA',
-			//'SMIMEA',
+			'SMIMEA',
 			'SPF',
 			'SRV',
 			//'SSHFP',
