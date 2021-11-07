@@ -10,7 +10,10 @@
     name: "{{ powerdns_db_name }}"
     state: import
     config_file: /root/.my.cnf
-    target: "{{ role_path }}/files/mysql-{{powerdns_version }}.sql"
+    target: "{{ item }}"
+  with_first_found:
+    - "{{ role_path }}/files/mysql-{{powerdns_version }}.sql"
+    - "{{ powerdns_rpm_schema }}"
   when: exists.changed
 
 # MySQL-python is dumb and can't detect authentication_string usage

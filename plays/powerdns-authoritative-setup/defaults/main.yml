@@ -113,3 +113,5 @@ powerdns_driver_config:
 addin_provider_name: Powerdns
 # INTERNAL Code installation
 addin_integration_type: "{{ (apnscp_debug | bool) | ternary('link', 'copy') }}"
+# INTERNAL RPM schema location
+powerdns_rpm_schema: "/usr/share/doc/pdns-backend-{{ (powerdns_driver == 'pgsql') | ternary('postgresql', powerdns_driver) }}/schema.{{ (powerdns_driver == 'pgsql') | ternary('postgresql', powerdns_driver) }}.sql"

@@ -23,10 +23,13 @@
   postgresql_db:
     name: "{{ powerdns_db_name}}"
     state: restore
-    target: "{{ role_path }}/files/pgsql-{{ powerdns_version }}.sql"
+    target: "{{ item }}"
     owner: "{{ powerdns_db_user }}"
     login_password: "{{ __powerdns_db_password }}"
     login_user: "{{powerdns_db_user}}"
     login_host: 127.0.0.1
+  with_first_found:
+    - "{{ role_path }}/files/pgsql-{{powerdns_version }}.sql"
+    - "{{ powerdns_rpm_schema }}"
   when: db_exists.changed
   notify: Restart PowerDNS
