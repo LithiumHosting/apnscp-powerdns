@@ -67,17 +67,18 @@ powerdns_skeleton:
     recursion: "{{ powerdns_enable_recursion }}"
     soa: "{{ powerdns_zone_soa | default(None)}}"
 powerdns_webserver_enable: "{{ powerdns_version is version('4.1', '>=') | ternary('no', 'yes') }}"
+# Enable API usage
+powerdns_api_enable: "{{ powerdns_zone_type in ['master','primary','native'] }}"
 powerdns_api_listen: "{{ powerdns_localonly | ternary('127.0.0.1', '0.0.0.0') }}"
 powerdns_api_whitelist: "{{ powerdns_localonly | ternary('127.0.0.1,::1', '0.0.0.0,::/0') }}"
-
 # INTERNAL Overide with powerdns_custom_config map
 powerdns_config:
-  api: yes
+  api: "{{ powerdns_api_enable | ternary('yes', 'no') }}"
   "api-key": "{{ __powerdns_api_key }}"
   # PacketCache will cause false positives in record_exists()
   "cache-ttl": "{{ powerdns_packet_cache_ttl | int }}"
   "include-dir": "{{ powerdns_local_dir }}"
-  webserver: "{{ powerdns_webserver_enable }}"
+  webserver: "{{ powerdns_webserver_enable | bool | ternary('yes', 'no') }}"
   "webserver-address": "{{  powerdns_api_listen }}"
   "webserver-allow-from": "{{ powerdns_api_whitelist}}"
   "webserver-port": "{{ powerdns_api_port }}"

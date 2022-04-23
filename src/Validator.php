@@ -22,7 +22,6 @@ class Validator implements ServiceProvider {
 
     public static function keyValid(): bool
     {
-
         try
         {
             (new Api())->do('GET', 'statistics');
