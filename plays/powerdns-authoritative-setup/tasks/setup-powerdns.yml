@@ -3,12 +3,14 @@
   template:
     src: templates/powerdns.repo.j2
     dest: "{{ powerdns_repo_config }}"
-    force: false
+    force: "{{ force | default(false) | bool }}"
+  register: r
 
 - name: Install PowerDNS RPMs
   yum:
     name: "{{ powerdns_packages }}"
-    state: present
+    state: "{{ r.changed | ternary('latest', 'present') }}"
+    allow_downgrade: True
     lock_timeout: 300
 
 - name: Merge custom config
