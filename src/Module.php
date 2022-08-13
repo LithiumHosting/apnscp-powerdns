@@ -57,11 +57,11 @@
 		protected $metaCache = [];
 
 		/**
-		 * @var Api[] pdns API per domain
+		 * @var Api pdns API client
 		 */
-		private $apis;
+		private $api;
 		private $ns;
-		private $records;
+		private $records = [];
 
 		public function __construct()
 		{
@@ -72,8 +72,6 @@
 			}
 
 			$this->ns = \defined('AUTH_PDNS_NS') ? AUTH_PDNS_NS : AUTH_PDNS; // Backwards compatible
-			$this->records = [];
-			$this->apis = [];
 		}
 
 		/**
@@ -93,7 +91,7 @@
 
 		public function __sleep()
 		{
-			$this->apis = [];
+			$this->api = [];
 
 			return array_keys(get_object_vars($this));
 		}
@@ -114,7 +112,7 @@
 			 */
 			try {
 				$nsNames = $this->get_hosting_nameservers($domain);
-				$api = $this->makeApi($domain);
+				$api = $this->makeApi();
 				$api->do('POST', 'servers/localhost/zones', [
 					'kind'        => $this->getZoneType(),
 					'name'        => $this->makeCanonical($domain),
@@ -152,13 +150,13 @@
 		 * @param string $zone per-zone tracking
 		 * @return Api
 		 */
-		private function makeApi(string $zone): Api
+		private function makeApi(): Api
 		{
-			if (!isset($this->apis[$zone])) {
-				$this->apis[$zone] = new Api();
+			if (!isset($this->api)) {
+				return $this->api = new Api();
 			}
 
-			return $this->apis[$zone];
+			return $this->api;
 		}
 
 		/**
@@ -311,7 +309,7 @@
 		public function remove_zone_backend(string $domain): bool
 		{
 			try {
-				$api = $this->makeApi($domain);
+				$api = $this->makeApi();
 				$api->do('DELETE', 'servers/localhost/zones' . sprintf('/%s', $this->makeCanonical($domain)));
 			} catch (ConnectException $e) {
 				return error("Failed to connect to PowerDNS API service: %s", $e->getMessage());
@@ -328,7 +326,7 @@
 		 */
 		public function record_exists(string $zone, string $subdomain, string $rr = 'ANY', string $parameter = ''): bool
 		{
-			$api = $this->makeApi($zone);
+			$api = $this->makeApi();
 			if ($api->dirty()) {
 				// Bust Packet Cache. Domain must be fqdn
 				$api->do('PUT', 'cache/flush?domain=' . $this->makeFqdn($zone, $subdomain, true));
@@ -365,7 +363,7 @@
 		{
 			$zone = rtrim($zone, '\.');
 			try {
-				$api = $this->makeApi($zone);
+				$api = $this->makeApi();
 				$api->do('GET', "zones/${zone}");
 			} catch (ConnectException $e) {
 				return error("Failed to connect to PowerDNS API service");
@@ -414,7 +412,7 @@
 			}
 
 			try {
-				$api = $this->makeApi($zone);
+				$api = $this->makeApi();
 				// Get zone and rrsets, need to parse the existing rrsets to ensure proper addition of new records
 				$zoneData = $api->do('GET', 'servers/localhost/zones' . sprintf('/%s', $this->makeCanonical($zone)));
 				$this->records = $zoneData['rrsets'];
@@ -604,7 +602,7 @@
 			}
 
 			try {
-				$api = $this->makeApi($zone);
+				$api = $this->makeApi();
 				// Get zone and rrsets, need to parse the existing rrsets to ensure proper addition of new records
 				$zoneData = $api->do('GET', 'servers/localhost/zones' . sprintf('/%s', $this->makeCanonical($zone)));
 				$this->records = $zoneData['rrsets'];
@@ -674,7 +672,7 @@
 		public function get_all_domains(): array
 		{
 			try {
-				$api = $this->makeApi('_ADMIN');
+				$api = $this->makeApi();
 				// Get zone and rrsets, need to parse the existing rrsets to ensure proper addition of new records
 				$zoneData = $api->do('GET', 'servers/localhost/zones');
 
@@ -729,7 +727,7 @@
 		protected function zoneAxfr(string $domain): ?string
 		{
 			try {
-				$api = $this->makeApi($domain);
+				$api = $this->makeApi();
 				$axfrrec = $api->do('GET',
 					'servers/localhost/zones' . sprintf('/%s', $this->makeCanonical($domain)) . '/export');
 			} catch (ConnectException $e) {
@@ -776,7 +774,7 @@
 			}
 
 			try {
-				$api = $this->makeApi($zone);
+				$api = $this->makeApi();
 				// Get zone and rrsets, need to parse the existing rrsets to ensure proper addition of new records
 				$zoneData = $api->do('GET', 'servers/localhost/zones' . sprintf('/%s', $this->makeCanonical($zone)));
 				$this->records = $zoneData['rrsets'];
