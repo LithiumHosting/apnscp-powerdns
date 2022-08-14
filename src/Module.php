@@ -89,13 +89,6 @@
 			return !AUTH_PDNS_RECURSION;
 		}
 
-		public function __sleep()
-		{
-			$this->api = [];
-
-			return array_keys(get_object_vars($this));
-		}
-
 		/**
 		 * Add DNS zone to service
 		 *
