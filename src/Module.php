@@ -75,6 +75,19 @@
 		}
 
 		/**
+		 * Required for serializing afi instance
+		 *
+		 * @return int[]|string[]
+		 */
+		public function __sleep()
+		{
+			$this->api = null;
+
+			return array_keys(get_object_vars($this));
+		}
+
+
+		/**
 		 * CNAME cannot be present in root
 		 *
 		 * @return bool
