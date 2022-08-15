@@ -215,6 +215,12 @@
 		 */
 		protected function createSOA($name, $primary, $soa_contact)
 		{
+			$soa = $this->makeCanonical($soa_contact);
+			if (false !== strpos($soa, '@')) {
+				$soa = str_replace('\\.', '.', $soa);
+				$pos = strpos($soa, '@');
+				$soa = str_replace('.', '\\.', substr($soa, 0, $pos)) . '.' . substr($soa, $pos+1);
+			}
 			$rrsets = [
 				'records' => [
 					[
@@ -222,7 +228,7 @@
 						// primary | contact | serial | refresh | retry | expire | ttl
 							'%s %s %s 3600 1800 604800 600',
 							$this->makeCanonical($primary),
-							$this->makeCanonical($soa_contact),
+							$soa,
 							date('Ymd') . '01'
 						),
 						'disabled' => false,
