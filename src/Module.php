@@ -12,6 +12,7 @@
 	use GuzzleHttp\Exception\BadResponseException;
 	use GuzzleHttp\Exception\ClientException;
 	use GuzzleHttp\Exception\ConnectException;
+	use GuzzleHttp\Exception\RequestException;
 	use GuzzleHttp\Exception\ServerException;
 	use Module\Provider\Contracts\ProviderInterface;
 	use Opcenter\Dns\Record as RecordBase;
@@ -341,10 +342,26 @@
 			$api = $this->makeApi();
 			if ($api->dirty()) {
 				// Bust Packet Cache. Domain must be fqdn
-				$api->do('PUT', 'cache/flush?domain=' . $this->makeFqdn($zone, $subdomain, true));
+				$this->flush($this->makeFqdn($zone, $subdomain, true));
 			}
 
 			return parent::record_exists($zone, $subdomain, $rr, $parameter);
+		}
+
+		public function flush(string $domain): bool
+		{
+			$hostname = $this->makeFqdn($domain, '', true);
+			// chop trailing dot
+			if (!preg_match(\Regex::DOMAIN, substr($hostname, 0, -1))) {
+				return error("Invalid domain");
+			}
+			try {
+				$this->makeApi()->do('PUT', 'cache/flush?domain=' . $hostname);
+				return true;
+			} catch (RequestException $e) {
+				$json = json_decode($e->getResponse()->getBody()->getContents(), true);
+				return error($json['error'] ?? "Unknown error");
+			}
 		}
 
 		/**
