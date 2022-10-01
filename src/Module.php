@@ -226,7 +226,7 @@
 				'records' => [
 					[
 						'content'  => sprintf(
-						// primary | contact | serial | refresh | retry | expire | ttl
+							// primary | contact | serial | refresh | retry | expire | ttl
 							'%s %s %s 3600 1800 604800 600',
 							$this->makeCanonical($primary),
 							$soa,
@@ -342,7 +342,7 @@
 			$api = $this->makeApi();
 			if ($api->dirty()) {
 				// Bust Packet Cache. Domain must be fqdn
-				$this->flush($this->makeFqdn($zone, $subdomain, true));
+				$this->flush($this->makeFqdn($zone, $subdomain));
 			}
 
 			return parent::record_exists($zone, $subdomain, $rr, $parameter);
@@ -352,7 +352,7 @@
 		{
 			$hostname = $this->makeFqdn($domain, '', true);
 			// chop trailing dot
-			if (!preg_match(\Regex::DOMAIN, substr($hostname, 0, -1))) {
+			if (!preg_match(\Regex::DOMAIN, trim($hostname, '.'))) {
 				return error("Invalid domain");
 			}
 			try {
@@ -378,7 +378,7 @@
 		private function makeFqdn($zone, $subdomain, $makeCanonical = false): string
 		{
 			if (strpos($subdomain, $zone) === false) {
-				$subdomain = implode('.', [$subdomain, $zone]);
+				$subdomain = implode('.', array_filter([$subdomain, $zone]));
 			}
 
 			if ($makeCanonical) {
@@ -534,8 +534,9 @@
 
 			switch ($type) {
 				case 'CNAME':
-					if ($r['parameter'] === '@' || $r['parameter'] === '127.0.0.1') // If 127.0.0.1, the user hit submit with an empty field that was pre-saved with the default A record value!
+					if ($r['parameter'] === '@' || $r['parameter'] === '127.0.0.1')
 					{
+						// If 127.0.0.1, the user hit submit with an empty field that was pre-saved with the default A record value!
 						$r['parameter'] = $r['zone'];
 					}
 
@@ -807,7 +808,6 @@
 				// Get zone and rrsets, need to parse the existing rrsets to ensure proper addition of new records
 				$zoneData = $api->do('GET', 'servers/localhost/zones' . sprintf('/%s', $this->makeCanonical($zone)));
 				$this->records = $zoneData['rrsets'];
-				unset($old['ttl']);
 				$rrsets = $this->changeRecords($old, $new);
 				$api->do('PATCH', 'zones' . sprintf('/%s', $this->makeCanonical($zone)), ['rrsets' => $rrsets]);
 			} catch (ConnectException $e) {
