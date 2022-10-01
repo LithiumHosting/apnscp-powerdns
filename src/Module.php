@@ -350,13 +350,12 @@
 
 		public function flush(string $domain): bool
 		{
-			$hostname = $this->makeFqdn($domain, '', true);
 			// chop trailing dot
-			if (!preg_match(\Regex::DOMAIN, trim($hostname, '.'))) {
+			if (!filter_var($domain, FILTER_VALIDATE_DOMAIN)) {
 				return error("Invalid domain");
 			}
 			try {
-				$this->makeApi()->do('PUT', 'cache/flush?domain=' . $hostname);
+				$this->makeApi()->do('PUT', 'cache/flush?domain=' . $this->makeFqdn($domain, '', true));
 				return true;
 			} catch (RequestException $e) {
 				$json = json_decode($e->getResponse()->getBody()->getContents(), true);
@@ -378,7 +377,7 @@
 		private function makeFqdn($zone, $subdomain, $makeCanonical = false): string
 		{
 			if (strpos($subdomain, $zone) === false) {
-				$subdomain = implode('.', array_filter([$subdomain, $zone]));
+				$subdomain = rtrim(implode('.', array_filter([$subdomain, $zone])), '.');
 			}
 
 			if ($makeCanonical) {
