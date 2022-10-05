@@ -124,7 +124,11 @@ class Api {
 		}
 
 		$hash = $this->recordHash("${subdomain}.${domain}", $rr);
-		return isset(self::$deadlineCache[$hash]) ?
+		if (!isset(self::$deadlineCache[$hash])) {
+			return false;
+		}
+
+		return ($this->getLastModification() - self::$deadlineCache[$hash]) <= $this->deadline ?
 			debug("%s pdns dirty", ltrim(implode('.', [$subdomain, $domain]), '.')) : false;
 	}
 
@@ -133,9 +137,10 @@ class Api {
 		if (!isset($params['rrsets'])) {
 			return $this;
 		}
+
 		foreach ($params['rrsets'] as $set) {
 			$hash = $this->recordHash($set['name'], $set['type']);
-			self::$deadlineCache[$hash] = 1;
+			self::$deadlineCache[$hash] = $this->getLastModification();
 		}
 
 		return $this;
