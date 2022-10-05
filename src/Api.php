@@ -10,41 +10,41 @@
 namespace Opcenter\Dns\Providers\Powerdns;
 
 
+use GuzzleHttp\Client;
 use GuzzleHttp\Exception\ServerException;
 use GuzzleHttp\Psr7\Request;
 use GuzzleHttp\Psr7\Response;
 
 class Api {
-    protected $endpoint;
+    protected string $endpoint = AUTH_PDNS_URI;
     /**
      * @var \GuzzleHttp\Client
      */
-    protected $client;
+    protected Client $client;
     /**
      * @var string
      */
-    protected $key;
+    protected string $key = AUTH_PDNS_KEY;
 
-    /**
+	/**
      * @var Response
      */
-    protected $lastResponse;
+    protected Response $lastResponse;
+
+	// @var int deadline for Packet Cache queries
+	private int $deadline;
 
 	/**
 	 * @var int last destructive action
 	 */
-    private $lastModification;
+	private static int $lastModification = 0;
+	private static array $deadlineCache = [];
 
-	// @var int deadline for Packet Cache queries
-	private $deadline;
-
-    /**
+	/**
      * Api constructor.
      */
     public function __construct()
     {
-        $this->key      = AUTH_PDNS_KEY;
-        $this->endpoint = AUTH_PDNS_URI;
         $this->client   = new \GuzzleHttp\Client([
             'base_uri' => rtrim($this->endpoint, '/') . '/',
             // disallow misconfigured endpoints that redirect to SSL but are configured without
@@ -56,7 +56,6 @@ class Api {
                 }
             ],
         ]);
-        $this->lastModification = time();
         $this->deadline = \defined('AUTH_PDNS_DEADLINE') ? (int)AUTH_PDNS_DEADLINE : 20;
     }
 
@@ -70,7 +69,6 @@ class Api {
             return [];
         }
 
-
 		if ($endpoint[0] === '/')
 		{
 			warn("Stripping `/' from endpoint `%s', remove the trailing / from auth.yaml", $endpoint);
@@ -78,13 +76,17 @@ class Api {
 		}
 
 		if ($method !== 'GET' && 0 !== strpos('cache/flush?', $endpoint)) {
-			$this->lastModification = time();
+			self::$lastModification = time();
+			if ($params) {
+				$this->flagDirty($params);
+			}
 		}
 
 		if (strpos($endpoint, 'servers/') === false)
         {
             $endpoint = 'servers/localhost/' . $endpoint;
         }
+
         $this->lastResponse = $this->client->request($method, $endpoint, [
             'headers' => [
                 'User-Agent' => PANEL_BRAND . ' ' . APNSCP_VERSION,
@@ -111,11 +113,36 @@ class Api {
 	 */
     public function getLastModification(): int
 	{
-		return $this->lastModification;
+		return self::$lastModification;
 	}
 
-	public function dirty(): bool
+	public function dirty(string $domain = '', string $subdomain = '', string $rr = 'ANY'): bool
 	{
-		return (time() - $this->lastModification) <= $this->deadline;
+		if ((time() - $this->getLastModification()) > $this->deadline) {
+			self::$deadlineCache = [];
+			return false;
+		}
+
+		$hash = $this->recordHash("${subdomain}.${domain}", $rr);
+		return isset(self::$deadlineCache[$hash]) ?
+			debug("%s pdns dirty", ltrim(implode('.', [$subdomain, $domain]), '.')) : false;
+	}
+
+	private function flagDirty(array $params): self
+	{
+		if (!isset($params['rrsets'])) {
+			return $this;
+		}
+		foreach ($params['rrsets'] as $set) {
+			$hash = $this->recordHash($set['name'], $set['type']);
+			self::$deadlineCache[$hash] = 1;
+		}
+
+		return $this;
+	}
+
+	private function recordHash(string $hostname, string $rr): int
+	{
+		return crc32($rr . '.' . trim($hostname, '.'));
 	}
 }

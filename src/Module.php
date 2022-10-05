@@ -340,22 +340,22 @@
 		public function record_exists(string $zone, string $subdomain, string $rr = 'ANY', string $parameter = ''): bool
 		{
 			$api = $this->makeApi();
-			if ($api->dirty()) {
+			if ($api->dirty($zone, $subdomain, $rr)) {
 				// Bust Packet Cache. Domain must be fqdn
-				$this->flush($this->makeFqdn($zone, $subdomain));
+				$this->flush($zone);
 			}
 
 			return parent::record_exists($zone, $subdomain, $rr, $parameter);
 		}
 
-		public function flush(string $domain): bool
+		public function flush(string $zone): bool
 		{
 			// chop trailing dot
-			if (!filter_var($domain, FILTER_VALIDATE_DOMAIN)) {
+			if (!filter_var($zone, FILTER_VALIDATE_DOMAIN)) {
 				return error("Invalid domain");
 			}
 			try {
-				$this->makeApi()->do('PUT', 'cache/flush?domain=' . $this->makeFqdn($domain, '', true));
+				$this->makeApi()->do('PUT', 'cache/flush?domain=' . $this->makeFqdn($zone, '', true));
 				return true;
 			} catch (RequestException $e) {
 				$json = json_decode($e->getResponse()->getBody()->getContents(), true);
