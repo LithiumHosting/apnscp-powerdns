@@ -451,8 +451,12 @@
 			} catch (ConnectException $e) {
 				return error("Failed to connect to PowerDNS API service");
 			} catch (ClientException $e) {
+				// @XXX query API only?
+				if (str_contains($msg = $this->renderMessage($e), 'Duplicate record in RRset ')) {
+					return warn($msg);
+				}
 				return error("Failed to create record '%(record)s': %(err)s",
-					['record' => (string)$record, 'err' => $this->renderMessage($e)]
+					['record' => (string)$record, 'err' => $msg]
 				);
 			}
 
