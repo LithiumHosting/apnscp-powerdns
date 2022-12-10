@@ -704,6 +704,10 @@
 		 */
 		public function get_all_domains(): array
 		{
+			if (!($this->permission_level & PRIVILEGE_ADMIN)) {
+				return parent::get_all_domains();
+			}
+
 			try {
 				$api = $this->makeApi();
 				// Get zone and rrsets, need to parse the existing rrsets to ensure proper addition of new records
@@ -721,8 +725,6 @@
 
 				return [];
 			}
-
-			return [];
 		}
 
 		protected function canonicalizeRecord(
