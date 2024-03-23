@@ -7,7 +7,7 @@ powerdns_localonly: true
 # Toggle installation of PowerDNS
 powerdns_enabled: false
 
-powerdns_version: 4.4
+powerdns_version: 4.8
 powerdns_repo_uri: "https://repo.powerdns.com/repo-files/centos-rec-{{ powerdns_version | regex_replace('\\.','') }}.repo"
 powerdns_repo_config: /etc/yum.repos.d/powerdns.repo
 powerdns_packages:

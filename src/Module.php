@@ -121,7 +121,7 @@
 				$nsNames = $this->get_hosting_nameservers($domain);
 				$api = $this->makeApi();
 				$api->do('POST', 'servers/localhost/zones', [
-					'kind'        => $this->getZoneType(),
+					'kind'        => $this->getZoneType() !== 'native' ? 'master' : 'native',
 					'name'        => $this->makeCanonical($domain),
 					'nameservers' => [], // Required to provision but allowed to be empty since we provide the NS rrsets
 					'rrsets'      => array_merge($this->createSOA($domain, $this->ns[0], $this->getSOAContact($domain)),
@@ -234,6 +234,9 @@
 						),
 						'disabled' => false,
 					],
+				],
+				'comments' => [
+					['account' => SERVER_NAME, 'modified_at' => time(), 'content' => json_encode(['site' => $this->site])]
 				],
 				'name'    => $this->makeCanonical($name),
 				'ttl'     => 86400,
@@ -771,8 +774,8 @@
 				return null;
 			} catch (ClientException $e) {
 				// ignore zone does not exist
-				warn('Failed to transfer DNS records from PowerDNS - try again later. Response code: %d',
-					$e->getResponse()->getStatusCode());
+				warn('Failed to transfer DNS records from PowerDNS %(domain)s - try again later. Response code: %(code)d',
+					['domain' => $domain, 'code' => $e->getResponse()->getStatusCode()]);
 
 				return null;
 			} catch (ServerException $e) {
