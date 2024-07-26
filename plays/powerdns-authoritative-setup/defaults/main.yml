@@ -77,6 +77,7 @@ powerdns_config:
   "api-key": "{{ __powerdns_api_key }}"
   # PacketCache will cause false positives in record_exists()
   "cache-ttl": "{{ powerdns_packet_cache_ttl | int }}"
+  "query-cache-ttl": "{{ powerdns_packet_cache_ttl | int }}"
   "include-dir": "{{ powerdns_local_dir }}"
   webserver: "{{ powerdns_webserver_enable | bool | ternary('yes', 'no') }}"
   "webserver-address": "{{  powerdns_api_listen }}"

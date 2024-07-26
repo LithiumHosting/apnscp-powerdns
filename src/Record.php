@@ -45,7 +45,7 @@
 
 		protected function formatMx()
 		{
-			$this->parameter = str_replace("\t", ' ', $this->parameter);
+			$this->parameter = str_replace("\t", ' ', (string)$this->parameter);
 
 			return $this->appendDot();
 		}
@@ -79,7 +79,7 @@
 		protected function formatTxt() {
 			// PowerDNS requires all space-delimited sets of TXT records to be quoted
 			// ensure last segment has terminating quotes
-			$this->parameter = (string)preg_replace('/^((?:(?:"(?>[^"]+)(?>"\s*)))*)(?!")(.+)$/', '\1"\2"', $this->parameter);
+			$this->parameter = preg_replace('/^((?:(?:"(?>[^"]+)(?>"\s*)))*)(?!")(.+)$/', '\1"\2"', (string)$this->parameter);
 			if ($this->parameter && $this->parameter[0] === '"' && $this->parameter[0] === $this->parameter[-1]) {
 				$this->parameter = '"' . trim($this->parameter, '"') . '"';
 			}
@@ -102,6 +102,9 @@
 			if (null !== ($data = $this->getMeta('data'))) {
 				$this->setMeta('data', rtrim($data, '.') . '.');
 			}
-			$this->parameter = rtrim($this->parameter, '.') . '.';
+
+			if (null !== $this->parameter) {
+				$this->parameter = rtrim($this->parameter, '.') . '.';
+			}
 		}
 	}
