@@ -301,8 +301,12 @@
 		 *
 		 * @return string
 		 */
-		private function renderMessage(BadResponseException $e): string
+		private function renderMessage(BadResponseException|\InvalidArgumentException $e): string
 		{
+
+			if ($e instanceof \InvalidArgumentException) {
+				return $e->getMessage();
+			}
 
 			$body = (array)\Error_Reporter::silence(static function () use ($e) {
 				return \json_decode($e->getResponse()->getBody()->getContents(), true);
@@ -675,16 +679,16 @@
 					foreach ($rrset['records'] as $k => $rrec) {
 						if (!$record['parameter'] || $rrec['content'] === $record['parameter']) {
 							unset($rrset['records'][$k]);
-							$rrset['records'] = array_values($rrset['records']);
-							break;
 						}
 					}
 					$rrset['changetype'] = 'REPLACE';
 					unset($rrset['comments']);
 
+					$rrset['records'] = array_values($rrset['records']);
 					$return[] = $rrset;
 				}
 			}
+
 			// No records match the name and type, let's create a new record set
 			if (empty($return) || empty(current($return)['records'])) {
 				$return = [
@@ -820,7 +824,7 @@
 				$api->do('PATCH', 'zones' . sprintf('/%s', $this->makeCanonical($zone)), ['rrsets' => $rrsets]);
 			} catch (ConnectException $e) {
 				return error("Failed to connect to PowerDNS API service");
-			} catch (ClientException $e) {
+			} catch (ClientException|\InvalidArgumentException $e) {
 				return error("Failed to update record '%s' on zone '%s' (old - rr: '%s', param: '%s'; new - name: '%s' rr: '%s', param: '%s'): %s",
 					$old['name'],
 					$zone,
@@ -857,6 +861,7 @@
 
 			// @TODO rewrite to use Record::is()
 			$paramMatch = $this->parseParameter($old);
+			$found = false;
 			foreach ($this->records as $rrset) {
 				if ($rrset['name'] === $oldName && $rrset['type'] === $old['rr']) {
 					// enumerate old records to determine change set
@@ -866,24 +871,30 @@
 					if (null === $new['ttl']) {
 						$new['ttl'] = $rrset['ttl'];
 					}
+
 					// remove record
 					$remove = $rrset['records'];
 					foreach ($remove as $idx => $r) {
 						if ($r['content'] !== $paramMatch) {
 							continue;
 						}
+						$found = true;
 						unset($remove[$idx]);
 					}
 
+					if (!$found) {
+						throw new \InvalidArgumentException("DNS record not found");
+					}
 					// has more records
 					$remove = [
 						'name'       => $rrset['name'],
-						'records'    => $remove,
-						'ttl'        => $rrset['ttl'],
+						'records'    => array_values($remove),
+						'ttl'        => $new['ttl'] ?? $rrset['ttl'],
 						'comments'   => $rrset['comments'],
 						'type'       => $rrset['type'],
 						'changetype' => empty($remove) ? 'DELETE' : 'REPLACE'
 					];
+
 					if (empty($remove['records'])) {
 						array_forget($remove, ['comments', 'ttl']);
 					}
@@ -902,7 +913,8 @@
 					return [$add];
 				}
 
-				return [$add, $remove];
+				$remove['records'] = array_merge($remove['records'], $add['records']);
+				return [$remove];
 			}
 
 			// merge cherry-picked records into existing record set
