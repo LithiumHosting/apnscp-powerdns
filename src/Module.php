@@ -399,7 +399,7 @@
 			$zone = rtrim($zone, '\.');
 			try {
 				$api = $this->makeApi();
-				$api->do('GET', "zones/${zone}");
+				$api->do('GET', "zones/{$zone}");
 			} catch (ConnectException $e) {
 				return error("Failed to connect to PowerDNS API service");
 			} catch (ClientException $e) {

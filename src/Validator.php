@@ -40,7 +40,7 @@ class Validator implements ServiceProvider {
 				case 307:
 				case 308:
 					$location = array_get($response->getHeader('location'), 0, 'UNKNOWN');
-					$reason = "Redirection encountered to `${location}'";
+					$reason = "Redirection encountered to `{$location}'";
 					break;
 				case 404:
 					$reason = 'Endpoint configuration is invalid';

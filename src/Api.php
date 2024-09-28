@@ -123,7 +123,7 @@ class Api {
 			return false;
 		}
 
-		$hash = $this->recordHash("${subdomain}.${domain}", $rr);
+		$hash = $this->recordHash("{$subdomain}.{$domain}", $rr);
 		if (!isset(self::$deadlineCache[$hash])) {
 			return false;
 		}
