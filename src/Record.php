@@ -52,7 +52,7 @@
 
 		protected function formatSpf()
 		{
-			$this->parameter = trim($this->parameter, '"');
+			$this->parameter = trim((string)$this->parameter, '"');
 			$this->parameter = '"' . $this->parameter . '"';
 		}
 
@@ -87,7 +87,7 @@
 
 		protected function formatUri()
 		{
-			$this->setMeta('data', '"' . trim($this->getMeta('data'), '"') . '"');
+			$this->setMeta('data', '"' . trim((string)$this->getMeta('data'), '"') . '"');
 			$this->parameter = implode(' ',
 				[
 					$this->getMeta('priority'),
